@@ -447,7 +447,7 @@ const App: React.FC = () => {
                     <td><input type="checkbox" checked={checked} onChange={e => handleSelectRow(index, e.target.checked)} /></td>
                     <td className="domain-name">{domain.domain}</td>
                     <td><span className={`status ${domain.status}`}>{STATUS_LABELS[domain.status]}</span></td>
-                    <td className="registrar" style={{ display: showRegistrar ? undefined : 'none' }">{domain.registrar}</td>
+                    <td className="registrar" style={{ display: showRegistrar ? undefined : 'none' }}>{domain.registrar}</td>
                     <td className="date">{domain.registerDate}</td>
                     <td className="date">{domain.expireDate}</td>
                     <td style={{ display: showProgress ? undefined : 'none' }}>
