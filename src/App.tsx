@@ -623,56 +623,38 @@ const App: React.FC = () => {
   // 1. 樱花粉按钮样式
   const sakuraBtnStyle = { backgroundColor: '#ffb6c1', borderColor: '#ffb6c1', color: '#fff' };
 
-  // WebDAV上传
+  // WebDAV上传（通过后端API）
   async function uploadToWebDAV() {
     try {
-      const url = import.meta.env.VITE_WEBDAV_URL;
-      const username = import.meta.env.VITE_WEBDAV_USERNAME;
-      const password = import.meta.env.VITE_WEBDAV_PASSWORD;
-      if (!url || !username || !password) {
-        setOpMsg('请先在Cloudflare Pages环境变量中配置WebDAV信息');
-        return;
-      }
-      const fileUrl = url.replace(/\/$/, '') + '/domain/domains-backup.json';
-      const res = await fetch(fileUrl, {
-        method: 'PUT',
-        headers: {
-          'Authorization': 'Basic ' + btoa(username + ':' + password),
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(domains, null, 2)
+      const res = await fetch('/api/domain-backup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(domains)
       });
-      if (!res.ok) throw new Error('WebDAV上传失败');
-      setOpMsg('WebDAV上传成功');
-    } catch (e) {
+      const data = await res.json();
+      if (data.success) {
+        setOpMsg('WebDAV上传成功');
+      } else {
+        setOpMsg('WebDAV上传失败: ' + (data.error || '未知错误'));
+      }
+    } catch (e: any) {
       setOpMsg('WebDAV上传失败: ' + (e.message || e));
     }
   }
-  // WebDAV下载
+  // WebDAV下载（通过后端API）
   async function downloadFromWebDAV() {
     try {
-      const url = import.meta.env.VITE_WEBDAV_URL;
-      const username = import.meta.env.VITE_WEBDAV_USERNAME;
-      const password = import.meta.env.VITE_WEBDAV_PASSWORD;
-      if (!url || !username || !password) {
-        setOpMsg('请先在Cloudflare Pages环境变量中配置WebDAV信息');
-        return;
-      }
-      const fileUrl = url.replace(/\/$/, '') + '/domain/domains-backup.json';
-      const res = await fetch(fileUrl, {
-        method: 'GET',
-        headers: {
-          'Authorization': 'Basic ' + btoa(username + ':' + password)
-        }
-      });
-      if (!res.ok) throw new Error('WebDAV下载失败');
+      const res = await fetch('/api/domain-backup');
       const data = await res.json();
-      if (!Array.isArray(data)) throw new Error('WebDAV文件内容无效');
-      await saveDomains(data);
-      setSelectedIndexes([]);
-      loadDomains();
-      setOpMsg('WebDAV导入成功！');
-    } catch (e) {
+      if (Array.isArray(data)) {
+        await saveDomains(data);
+        setSelectedIndexes([]);
+        loadDomains();
+        setOpMsg('WebDAV导入成功！');
+      } else {
+        setOpMsg('WebDAV下载失败: ' + (data.error || '未知错误'));
+      }
+    } catch (e: any) {
       setOpMsg('WebDAV下载失败: ' + (e.message || e));
     }
   }
