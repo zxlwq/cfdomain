@@ -137,6 +137,12 @@ const App: React.FC = () => {
       .catch(() => setCarouselImages(["background.jpeg"]));
   }, []);
 
+  // 轮播时长设置
+  const [carouselInterval, setCarouselInterval] = useState(() => {
+    const val = localStorage.getItem('carouselInterval');
+    return val ? Number(val) : 30;
+  });
+
   // 轮播逻辑
   useEffect(() => {
     if (bgImageUrl && bgImageUrl.trim() !== '') {
@@ -159,11 +165,11 @@ const App: React.FC = () => {
     carouselTimer.current = setInterval(() => {
       carouselIndex.current = (carouselIndex.current + 1) % carouselImages.length;
       setBg(carouselIndex.current);
-    }, 30000); // 30秒切换
+    }, carouselInterval * 1000); // 轮播间隔可配置
     return () => {
       if (carouselTimer.current) clearInterval(carouselTimer.current);
     };
-  }, [bgImageUrl, carouselImages]);
+  }, [bgImageUrl, carouselImages, carouselInterval]);
 
   useEffect(() => {
     const remindedFlag = localStorage.getItem('dontRemindToday');
@@ -334,9 +340,40 @@ const App: React.FC = () => {
     localStorage.setItem('notificationInterval', notificationInterval);
     alert('通知设置已保存');
   }
-  function saveBgImage() {
+  // 新增：下载图片并保存到public/image
+  async function downloadAndSaveImage(url: string): Promise<string | null> {
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('图片下载失败');
+      const blob = await res.blob();
+      // 自动生成文件名
+      const ext = url.split('.').pop()?.split('?')[0] || 'jpg';
+      const name = `custom_bg_${Date.now()}.${ext}`;
+      // 保存到public/image（仅开发环境有效，生产需后端支持）
+      // 这里用a标签模拟下载，实际保存到服务器需后端API
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = name;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      // 返回文件名用于加入images.json
+      return name;
+    } catch {
+      setOpMsg('图片下载失败');
+      return null;
+    }
+  }
+  async function saveBgImage() {
+    let fileName = '';
+    if (bgImageUrl && /^https?:\/\//.test(bgImageUrl)) {
+      fileName = await downloadAndSaveImage(bgImageUrl) || '';
+    }
     localStorage.setItem('customBgImageUrl', bgImageUrl);
-    alert('背景图片已保存');
+    localStorage.setItem('carouselInterval', String(carouselInterval));
+    // 加入images.json（仅提示，实际需后端支持）
+    if (fileName) setOpMsg('图片已下载，请手动将其添加到public/image并更新images.json');
+    else alert('背景图片已保存');
   }
   // 恢复默认背景图片逻辑
   function resetBgImage() {
@@ -641,23 +678,40 @@ const App: React.FC = () => {
           </div>
         </div>
         <div style={{ margin: '10px 0', display: 'flex', gap: 10, flexDirection: isMobile ? 'column' : 'row', flexWrap: 'wrap' }}>
-          <button className="btn btn-danger" style={isMobile ? { width: '100%' } : {}} onClick={handleBatchDelete}>批量删除</button>
-          <button className="btn btn-secondary" style={{ ...sakuraBtnStyle, width: isMobile ? '100%' : undefined }} onClick={() => handleBatchSetStatus('expired')}>批量标记为已过期</button>
-          <button className="btn btn-primary" style={isMobile ? { width: '100%' } : {}} onClick={() => handleBatchSetStatus('active')}>批量标记为正常</button>
+          {/* 批量操作下拉框，放到域名栏前面 */}
         </div>
         <div className="table-container" style={isMobile ? { overflowX: 'auto', maxHeight: 480, position: 'relative' } : {}} onScroll={handleTableScroll}>
           <table style={isMobile ? { minWidth: 700 } : {}}>
             <thead>
               <tr>
-                <th></th>
-                <th onClick={() => { setSortField('domain'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }} className={`sortable ${getSortClass('domain')}`}>域名</th>
+                <th style={{ width: 36 }}><input type="checkbox" onChange={handleSelectAll} checked={selectedIndexes.length === paged.length && paged.length > 0} /></th>
+                <th>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <select
+                      style={{ height: 28, fontSize: 14 }}
+                      onChange={e => {
+                        if (e.target.value === 'expired') handleBatchSetStatus('expired');
+                        else if (e.target.value === 'active') handleBatchSetStatus('active');
+                        else if (e.target.value === 'delete') handleBatchDelete();
+                        e.target.value = '';
+                      }}
+                      defaultValue=""
+                    >
+                      <option value="" disabled>批量操作</option>
+                      <option value="expired">批量为已过期</option>
+                      <option value="active">批量为正常</option>
+                      <option value="delete">批量删除</option>
+                    </select>
+                    <span onClick={() => { setSortField('domain'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }} className={`sortable ${getSortClass('domain')}`}>域名</span>
+                  </div>
+                </th>
                 <th onClick={() => { setSortField('status'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }} className={`sortable ${getSortClass('status')}`}>状态</th>
                 <th onClick={() => { setSortField('registrar'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }} className={`sortable ${getSortClass('registrar')}`}>注册商</th>
                 <th onClick={() => { setSortField('registerDate'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }} className={`sortable ${getSortClass('registerDate')}`}>注册日期</th>
                 <th onClick={() => { setSortField('expireDate'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }} className={`sortable ${getSortClass('expireDate')}`}>过期日期</th>
+                <th>到期天数</th>
                 {showProgress && <th style={{ width: 120 }}>使用进度</th>}
                 <th style={{ width: 140 }}>操作</th>
-                <th style={{ width: 36 }}><input type="checkbox" onChange={handleSelectAll} checked={selectedIndexes.length === paged.length && paged.length > 0} /></th>
               </tr>
             </thead>
             <tbody>
@@ -679,7 +733,8 @@ const App: React.FC = () => {
                     {showRegistrar && <td className="registrar">{domain.registrar}</td>}
                     <td><span className={`status ${domain.status}`}>{STATUS_LABELS[domain.status]}</span></td>
                     <td className="date">{domain.registerDate}</td>
-                    <td className="date">{domain.expireDate} <span style={{ color: daysColor, fontWeight: 600, marginLeft: 4 }}>{daysLeft}天</span></td>
+                    <td className="date">{domain.expireDate}</td>
+                    <td style={{ color: daysColor, fontWeight: 600 }}>{daysLeft}天</td>
                     {showProgress && <td>
                       <div className="progress-bar">
                         <div className={`progress-fill ${progressClass}`} style={{ width: progress + '%' }}></div>
@@ -687,7 +742,7 @@ const App: React.FC = () => {
                       <span className="progress-text">{progress}%</span>
                     </td>}
                     <td>
-                      <div className="action-buttons">
+                      <div className="action-buttons" style={{ display: 'flex', flexDirection: 'row', gap: 8 }}>
                         <button className="btn-edit" onClick={() => handleEdit(index + (page - 1) * pageSize)}>修改</button>
                         <button className="btn-delete" onClick={() => handleDelete(index + (page - 1) * pageSize)}>删除</button>
                         <button className="btn-renew" onClick={() => {
@@ -826,9 +881,14 @@ const App: React.FC = () => {
                 <label>背景图片URL</label>
                 <input type="url" value={bgImageUrl} onChange={e => setBgImageUrl(e.target.value)} placeholder="https://example.com/bg.jpg" />
               </div>
+              <div className="form-group">
+                <label>轮播时长（秒）</label>
+                <input type="number" min={5} max={600} value={carouselInterval} onChange={e => setCarouselInterval(Number(e.target.value))} />
+                <small style={{ color: '#666', fontSize: '0.9rem' }}>设置public/image文件夹内图片轮播间隔，建议5-600秒</small>
+              </div>
               <div className="modal-buttons">
                 <button className="btn btn-primary" onClick={saveBgImage}>保存背景</button>
-                <button className="btn btn-secondary" onClick={resetBgImage}>恢复默认</button>
+                <button className="btn btn-secondary" style={{ ...sakuraBtnStyle }} onClick={resetBgImage}>恢复默认</button>
               </div>
               <small style={{ color: '#666', fontSize: '0.9rem' }}>支持jpg/png/webp等图片格式，建议高清大图。</small>
             </div>
