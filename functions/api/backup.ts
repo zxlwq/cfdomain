@@ -1,3 +1,5 @@
+// Cloudflare Pages Functions: 域名面板 D1 数据库 WebDAV 备份/恢复API
+// 环境变量：WEBDAV_URL, WEBDAV_USER, WEBDAV_PASS, DB
 export const onRequest: PagesFunction<{
   WEBDAV_URL: string;
   WEBDAV_USER: string;
@@ -29,7 +31,8 @@ export const onRequest: PagesFunction<{
       });
       if (!res.ok) {
         const err = await res.text();
-        return new Response(JSON.stringify({ success: false, error: err || 'WebDAV上传失败' }), { status: 500 });
+        console.error('WebDAV上传失败:', res.status, err);
+        return new Response(JSON.stringify({ success: false, error: err || 'WebDAV上传失败', status: res.status }), { status: 500 });
       }
       return new Response(JSON.stringify({ success: true, url: fileUrl }), { status: 200 });
     } catch (e: any) {
