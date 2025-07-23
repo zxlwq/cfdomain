@@ -640,7 +640,7 @@ const App: React.FC = () => {
           <p style={statNumberStyle}>{avgProgress}%</p>
         </div>
       </div>
-      <div className="domain-table" style={{ ...(isMobile ? { fontSize: 12 } : {}), width: '100%', maxWidth: 1600, margin: '0 auto' }}>
+      <div className="domain-table" style={{ ...(isMobile ? { fontSize: 12 } : {}), width: '100%', maxWidth: 1600, minWidth: 0, margin: '0 auto', overflowX: 'visible' }}>
         <div className="table-header">
           <h2>域名列表</h2>
           <div className="search-box">
@@ -650,8 +650,8 @@ const App: React.FC = () => {
         <div style={{ margin: '10px 0', display: 'flex', gap: 10, flexDirection: isMobile ? 'column' : 'row', flexWrap: 'wrap' }}>
           {/* 批量操作下拉框，放到域名栏前面 */}
         </div>
-        <div className="table-container" style={isMobile ? { overflowX: 'auto', maxHeight: 480, position: 'relative' } : {}} onScroll={handleTableScroll}>
-          <table style={isMobile ? { minWidth: 700 } : {}}>
+        <div className="table-container" style={isMobile ? { maxHeight: 480, position: 'relative' } : { width: '100%' }} onScroll={handleTableScroll}>
+          <table style={{ width: '100%' }}>
             <thead>
               <tr>
                 <th>
