@@ -418,7 +418,7 @@ const App: React.FC = () => {
     if (sortField === field) return sortOrder === 'asc' ? 'sorted-asc' : 'sorted-desc';
     return '';
   }
-
+  
   const isMobile = window.innerWidth <= 768;
 
   // 分页数据
@@ -439,7 +439,7 @@ const App: React.FC = () => {
       fileInputRef.current.click();
     }
   }
-  // 升级后的CSV导入逻辑，支持更宽松的表头和引号处理
+  // 升级后的CSV导入逻辑，支持更宽松的表头和引号处理，兼容id字段
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     if (!e.target.files || e.target.files.length === 0) {
       setOpMsg('请先选择文件');
@@ -457,7 +457,23 @@ const App: React.FC = () => {
           // 处理引号和逗号分隔
           function parseCSVLine(line: string) {
             // 简单处理：去除每个字段前后的引号和空格
-            return line.split(',').map(cell => cell.replace(/^"|"$/g, '').trim());
+            // 支持逗号分隔和引号包裹
+            const result: string[] = [];
+            let current = '';
+            let inQuotes = false;
+            for (let i = 0; i < line.length; i++) {
+              const char = line[i];
+              if (char === '"') {
+                inQuotes = !inQuotes;
+              } else if (char === ',' && !inQuotes) {
+                result.push(current.trim());
+                current = '';
+              } else {
+                current += char;
+              }
+            }
+            result.push(current.trim());
+            return result.map(cell => cell.replace(/^"|"$/g, '').trim());
           }
           const headerRaw = parseCSVLine(lines[0]);
           // 字段名归一化函数
@@ -465,27 +481,29 @@ const App: React.FC = () => {
             return s.replace(/^"|"$/g, '').replace(/[_\s-]/g, '').toLowerCase();
           }
           // 字段映射表，支持多种写法
-          const fieldMap: Record<string, 'domain'|'registrar'|'registerDate'|'expireDate'|'status'|undefined> = {
+          const fieldMap: Record<string, string> = {
+            'id': 'id',
             '域名': 'domain', 'domain': 'domain',
             '注册商': 'registrar', 'registrar': 'registrar',
             '注册日期': 'registerDate', 'registrationdate': 'registerDate', 'registerdate': 'registerDate', 'register_date': 'registerDate',
             '过期日期': 'expireDate', 'expirationdate': 'expireDate', 'expiredate': 'expireDate', 'expire_date': 'expireDate',
-            '状态': 'status', 'status': 'status'
+            '状态': 'status', 'status': 'status',
+            '续期链接': 'renewUrl', 'renewurl': 'renewUrl', 'renew_url': 'renewUrl'
           };
           // 归一化后的header
           const headerNorm = headerRaw.map(norm);
           // 找到每个字段在header中的索引
-          const colIdx: Partial<Record<'domain'|'registrar'|'registerDate'|'expireDate'|'status', number>> = {};
+          const colIdx: Partial<Record<'id'|'domain'|'registrar'|'registerDate'|'expireDate'|'status'|'renewUrl', number>> = {};
           headerNorm.forEach((h, idx) => {
             const mapped = fieldMap[h];
-            if (mapped && colIdx[mapped] === undefined) colIdx[mapped] = idx;
+            if (mapped && colIdx[mapped as keyof typeof colIdx] === undefined) colIdx[mapped as keyof typeof colIdx] = idx;
           });
           if (colIdx.domain === undefined || colIdx.registrar === undefined || colIdx.registerDate === undefined || colIdx.expireDate === undefined || colIdx.status === undefined) {
-            throw new Error('CSV表头需包含：域名/domain，注册商/registrar，注册日期/register_date，过期日期/expire_date，状态/status（支持多种写法）');
+            throw new Error('CSV表头需包含：id(可选)、域名/domain，注册商/registrar，注册日期/register_date，过期日期/expire_date，状态/status（支持多种写法）');
           }
           const newDomains = lines.slice(1).map(line => {
             const cols = parseCSVLine(line);
-            return {
+            const obj: any = {
               domain: cols[colIdx.domain!],
               registrar: cols[colIdx.registrar!],
               registerDate: cols[colIdx.registerDate!],
@@ -493,6 +511,14 @@ const App: React.FC = () => {
               status: (cols[colIdx.status!] === '正常' || cols[colIdx.status!] === 'active' || cols[colIdx.status!].toLowerCase() === 'active') ? 'active' :
                       (cols[colIdx.status!] === '已过期' || cols[colIdx.status!] === 'expired' || cols[colIdx.status!].toLowerCase() === 'expired') ? 'expired' : 'pending'
             };
+            if (colIdx.id !== undefined && cols[colIdx.id!]) {
+              const idVal = cols[colIdx.id!];
+              obj.id = isNaN(Number(idVal)) ? idVal : Number(idVal);
+            }
+            if (colIdx.renewUrl !== undefined && cols[colIdx.renewUrl!]) {
+              obj.renewUrl = cols[colIdx.renewUrl!];
+            }
+            return obj;
           });
           await saveDomains(newDomains);
           setSelectedIndexes([]);
