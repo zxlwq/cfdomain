@@ -42,7 +42,10 @@ const defaultDomain: Domain = {
 };
 
 const App: React.FC = () => {
-@@ -41,11 +52,76 @@
+  const [loading, setLoading] = useState(true);
+  const [domains, setDomains] = useState<Domain[]>([]);
+  const [search, setSearch] = useState('');
+  const [sortField, setSortField] = useState<string | null>(null);
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [expireModal, setExpireModal] = useState(false);
   const [expiringDomains, setExpiringDomains] = useState<Domain[]>([]);
@@ -119,11 +122,17 @@ const App: React.FC = () => {
   async function loadDomains() {
     setLoading(true);
     try {
-@@ -59,15 +135,15 @@
+      const data = await fetchDomains();
+      setDomains(data);
+    } catch (error) {
+      console.error('Failed to fetch domains:', error);
+      setOpMsg('加载域名失败');
+    } finally {
+      setLoading(false);
+    }
   }
 
   function checkExpiringDomains(domains: Domain[]) {
-    const warningDays = 15;
     const warningDays = parseInt(localStorage.getItem('notificationWarningDays') || '15', 10);
     const today = new Date();
     const warningDate = new Date(today.getTime() + warningDays * 24 * 60 * 60 * 1000);
@@ -133,12 +142,30 @@ const App: React.FC = () => {
     });
     setExpiringDomains(expiring);
     if (expiring.length > 0) {
-    if (expiring.length > 0 && !dontRemindToday) {
       setExpireModal(true);
       notifyExpiring(expiring);
     }
-@@ -110,11 +186,51 @@
-    loadDomains();
+  }
+
+  function handleAdd() {
+    setEditIndex(-1);
+    setForm(defaultDomain);
+    setModalOpen(true);
+  }
+
+  function handleEdit(index: number) {
+    setEditIndex(index);
+    setForm(domains[index]);
+    setModalOpen(true);
+  }
+
+  function handleDelete(index: number) {
+    const domainToDelete = domains[index];
+    if (window.confirm(`确定要删除域名 "${domainToDelete.domain}" 吗？`)) {
+      deleteDomain(domainToDelete.id || 0);
+      loadDomains();
+      setOpMsg('域名删除成功');
+    }
   }
 
   // 5. 数据本地备份与恢复
@@ -185,14 +212,12 @@ const App: React.FC = () => {
       domain.domain.toLowerCase().includes(search.toLowerCase()) ||
       domain.registrar.toLowerCase().includes(search.toLowerCase()) ||
       domain.status.toLowerCase().includes(search.toLowerCase())
-      (filterStatus === 'all' || domain.status === filterStatus) &&
-      (domain.domain.toLowerCase().includes(search.toLowerCase()) ||
-        domain.registrar.toLowerCase().includes(search.toLowerCase()) ||
-        domain.status.toLowerCase().includes(search.toLowerCase()))
     );
     if (sortField) {
       list = [...list].sort((a, b) => {
-@@ -131,22 +247,152 @@
+        const valA = a[sortField as keyof Domain];
+        const valB = b[sortField as keyof Domain];
+        if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
         if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
         return 0;
       });
@@ -336,7 +361,6 @@ const App: React.FC = () => {
   const totalPages = Math.ceil(filteredDomains().length / pageSize);
 
   return (
-    <div className="container">
     <div className={darkMode ? 'container dark' : 'container'}>
       <div className="header">
         <h1>域名面板</h1>
@@ -347,11 +371,22 @@ const App: React.FC = () => {
       </div>
       <div className="stats-grid">
         <div className="stat-card">
-@@ -184,53 +430,75 @@
-          })}
+          <h3>总域名数</h3>
+          <p>{total}</p>
         </div>
-      )}
-      <div className="domain-table">
+        <div className="stat-card">
+          <h3>正常域名</h3>
+          <p>{active}</p>
+        </div>
+        <div className="stat-card">
+          <h3>已过期域名</h3>
+          <p>{expired}</p>
+        </div>
+        <div className="stat-card">
+          <h3>平均使用进度</h3>
+          <p>{avgProgress}%</p>
+        </div>
+      </div>
       <div className="domain-table" style={isMobile ? { fontSize: 12 } : {}}>
         <div className="table-header">
           <h2>域名列表</h2>
@@ -370,37 +405,26 @@ const App: React.FC = () => {
           <button className="btn btn-secondary" style={isMobile ? { width: '100%' } : {}} onClick={() => handleBatchSetStatus('expired')}>批量标记为已过期</button>
           <button className="btn btn-primary" style={isMobile ? { width: '100%' } : {}} onClick={() => handleBatchSetStatus('active')}>批量标记为正常</button>
         </div>
-        <div className="table-container">
-          <table>
         <div className="table-container" style={isMobile ? { overflowX: 'auto', maxHeight: 480, position: 'relative' } : {}} onScroll={handleTableScroll}>
           <table style={isMobile ? { minWidth: 700 } : {}}>
             <thead>
               <tr>
                 <th></th>
-                <th onClick={() => { setSortField('domain'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }} className="sortable">域名</th>
-                <th onClick={() => { setSortField('status'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }} className="sortable">状态</th>
-                <th onClick={() => { setSortField('registrar'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }} className="sortable">注册商</th>
-                <th onClick={() => { setSortField('registerDate'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }} className="sortable">注册日期</th>
-                <th onClick={() => { setSortField('expireDate'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }} className="sortable">过期日期</th>
-                <th>使用进度</th>
-                <th>操作</th>
-                <th style={{ width: 36 }}><input type="checkbox" onChange={handleSelectAll} checked={selectedIndexes.length === paged.length && paged.length > 0} /></th>
                 <th onClick={() => { setSortField('domain'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }} className={`sortable ${getSortClass('domain')}`}>域名</th>
-                {showRegistrar && <th onClick={() => { setSortField('registrar'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }} className={`sortable ${getSortClass('registrar')}`}>注册商</th>}
                 <th onClick={() => { setSortField('status'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }} className={`sortable ${getSortClass('status')}`}>状态</th>
+                <th onClick={() => { setSortField('registrar'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }} className={`sortable ${getSortClass('registrar')}`}>注册商</th>
                 <th onClick={() => { setSortField('registerDate'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }} className={`sortable ${getSortClass('registerDate')}`}>注册日期</th>
                 <th onClick={() => { setSortField('expireDate'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }} className={`sortable ${getSortClass('expireDate')}`}>过期日期</th>
                 {showProgress && <th style={{ width: 120 }}>使用进度</th>}
                 <th style={{ width: 140 }}>操作</th>
+                <th style={{ width: 36 }}><input type="checkbox" onChange={handleSelectAll} checked={selectedIndexes.length === paged.length && paged.length > 0} /></th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={8} className="loading">加载中...</td></tr>
-              ) : filteredDomains().length === 0 ? (
+                <tr><td colSpan={showRegistrar && showProgress ? 9 : 7} className="loading">加载中...</td></tr>
               ) : paged.length === 0 ? (
-                <tr><td colSpan={8} className="loading">暂无域名数据</td></tr>
-              ) : filteredDomains().map((domain, index) => {
+                <tr><td colSpan={showRegistrar && showProgress ? 9 : 7} className="loading">暂无域名数据</td></tr>
               ) : paged.map((domain, index) => {
                 const progress = calculateProgress(domain.registerDate, domain.expireDate);
                 const progressClass = getProgressClass(progress);
@@ -409,29 +433,21 @@ const App: React.FC = () => {
                 const daysLeft = Math.ceil((expireDate.getTime() - Date.now()) / (24 * 60 * 60 * 1000));
                 let daysColor = daysLeft <= 7 ? '#dc3545' : daysLeft <= 30 ? '#fd7e14' : '#28a745';
                 return (
-                  <tr key={domain.domain}>
-                    <td></td>
                   <tr key={domain.domain} className={editIndex === index ? 'editing-row' : ''} ref={editIndex === index ? editRowRef : undefined}>
                     <td><input type="checkbox" checked={checked} onChange={e => handleSelectRow(index + (page - 1) * pageSize, e.target.checked)} /></td>
                     <td className="domain-name">{domain.domain}</td>
                     {showRegistrar && <td className="registrar">{domain.registrar}</td>}
                     <td><span className={`status ${domain.status}`}>{STATUS_LABELS[domain.status]}</span></td>
-                    <td className="registrar">{domain.registrar}</td>
                     <td className="date">{domain.registerDate}</td>
-                    <td className="date">{domain.expireDate}</td>
-                    <td>
                     <td className="date">{domain.expireDate} <span style={{ color: daysColor, fontWeight: 600, marginLeft: 4 }}>{daysLeft}天</span></td>
                     {showProgress && <td>
                       <div className="progress-bar">
                         <div className={`progress-fill ${progressClass}`} style={{ width: progress + '%' }}></div>
                       </div>
                       <span className="progress-text">{progress}%</span>
-                    </td>
                     </td>}
                     <td>
                       <div className="action-buttons">
-                        <button className="btn-edit" onClick={() => handleEdit(index)}>修改</button>
-                        <button className="btn-delete" onClick={() => handleDelete(index)}>删除</button>
                         <button className="btn-edit" onClick={() => handleEdit(index + (page - 1) * pageSize)}>修改</button>
                         <button className="btn-delete" onClick={() => handleDelete(index + (page - 1) * pageSize)}>删除</button>
                         <button className="btn-renew" onClick={() => {
@@ -444,7 +460,8 @@ const App: React.FC = () => {
                       </div>
                     </td>
                   </tr>
-@@ -239,11 +507,24 @@
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -465,12 +482,32 @@ const App: React.FC = () => {
       <button className="add-domain-btn" onClick={handleAdd}>+</button>
       {modalOpen && (
         <div className="modal" style={{ display: 'block' }} onClick={e => { if (e.target === e.currentTarget) setModalOpen(false); }}>
-          <div className="modal-content">
           <div className="modal-content" style={isMobile ? { width: '98%', padding: 10 } : {}}>
             <div className="modal-header">
               <h3>{editIndex >= 0 ? '编辑域名' : '添加新域名'}</h3>
             </div>
-@@ -272,6 +553,10 @@
+            <form onSubmit={handleFormSubmit}>
+              <div className="form-group">
+                <label htmlFor="domain">域名</label>
+                <input id="domain" value={form.domain} onChange={handleFormChange} required />
+              </div>
+              <div className="form-group">
+                <label htmlFor="registrar">注册商</label>
+                <input id="registrar" value={form.registrar} onChange={handleFormChange} />
+              </div>
+              <div className="form-group">
+                <label htmlFor="registerDate">注册日期</label>
+                <input type="date" id="registerDate" value={form.registerDate} onChange={handleFormChange} required />
+              </div>
+              <div className="form-group">
+                <label htmlFor="expireDate">过期日期</label>
+                <input type="date" id="expireDate" value={form.expireDate} onChange={handleFormChange} required />
+              </div>
+              <div className="form-group">
+                <label htmlFor="status">状态</label>
+                <select id="status" value={form.status} onChange={handleFormChange} required>
+                  <option value="active">正常</option>
+                  <option value="expired">已过期</option>
                   <option value="pending">待激活</option>
                 </select>
               </div>
@@ -481,17 +518,27 @@ const App: React.FC = () => {
               <div className="modal-buttons">
                 <button type="button" className="btn btn-secondary" onClick={() => setModalOpen(false)}>取消</button>
                 <button type="submit" className="btn btn-primary">保存</button>
-@@ -282,7 +567,7 @@
+              </div>
+            </form>
+          </div>
+        </div>
       )}
       {expireModal && (
         <div className="modal" style={{ display: 'block' }} onClick={e => { if (e.target === e.currentTarget) setExpireModal(false); }}>
-          <div className="modal-content">
           <div className="modal-content" style={isMobile ? { width: '98%', padding: 10 } : {}}>
             <div className="modal-header">
               <h3>⚠️ 域名到期提醒</h3>
             </div>
-@@ -298,7 +583,76 @@
-              })}
+            <div className="modal-body">
+              <p>以下域名即将到期，请及时处理：</p>
+              {expiringDomains.map(domain => (
+                <div key={domain.domain} style={{ marginBottom: 10, padding: 10, background: '#f8f9fa', borderRadius: 8 }}>
+                  <p><strong>域名:</strong> {domain.domain}</p>
+                  <p><strong>注册商:</strong> {domain.registrar}</p>
+                  <p><strong>过期日期:</strong> {domain.expireDate}</p>
+                  <p><strong>剩余天数:</strong> <span style={{ color: '#dc3545', fontWeight: 600 }}>{Math.ceil((new Date(domain.expireDate).getTime() - Date.now()) / (24 * 60 * 60 * 1000))}天</span></p>
+                </div>
+              ))}
             </div>
             <div className="modal-buttons">
               <button className="btn btn-primary" onClick={() => setExpireModal(false)}>我知道了</button>
@@ -568,3 +615,9 @@ const App: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+    </div>
+  );
+}
+
+export default App;
