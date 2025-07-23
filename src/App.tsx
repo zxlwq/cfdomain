@@ -661,14 +661,14 @@ const App: React.FC = () => {
                 </th>
                 <th onClick={() => { setSortField('registrar'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }} className={`sortable ${getSortClass('registrar')}`}>注册商</th>
                 <th onClick={() => { setSortField('status'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }} className={`sortable ${getSortClass('status')}`}>状态</th>
-                <th onClick={() => { setSortField('registerDate'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }} className={`sortable ${getSortClass('registerDate')}`}>注册日期</th>
-                <th onClick={() => { setSortField('expireDate'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }} className={`sortable ${getSortClass('expireDate')}`}>过期日期</th>
-                <th onClick={() => { setSortField('daysLeft'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }} className={`sortable ${getSortClass('daysLeft')}`}>到期天数
+                <th onClick={() => { setSortField('registerDate'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }} className={`sortable ${getSortClass('registerDate')}`} style={{ minWidth: 110 }}>注册日期</th>
+                <th onClick={() => { setSortField('expireDate'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }} className={`sortable ${getSortClass('expireDate')}`} style={{ minWidth: 110 }}>过期日期</th>
+                <th onClick={() => { setSortField('daysLeft'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }} className={`sortable ${getSortClass('daysLeft')}`} style={{ minWidth: 90 }}>到期天数
                   <span style={{ fontSize: 12, marginLeft: 2 }}>{sortField === 'daysLeft' ? (sortOrder === 'asc' ? '▲' : '▼') : '△'}</span>
                 </th>
                 {showProgress && <th style={{ width: 120 }}>使用进度</th>}
                 <th style={{ width: 140 }}>操作</th>
-                <th style={{ minWidth: 120 }}>
+                <th style={{ minWidth: 80 }}>
                   <select
                     style={{ height: 28, fontSize: 14, marginRight: 0 }}
                     onChange={e => {
