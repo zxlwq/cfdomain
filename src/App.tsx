@@ -626,16 +626,21 @@ const App: React.FC = () => {
   // WebDAV上传（通过后端API）
   async function uploadToWebDAV() {
     try {
-      const res = await fetch('/api/domain-backup', {
+      const res = await fetch('/api/backup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(domains)
       });
-      const data = await res.json();
-      if (data.success) {
+      let data;
+      try {
+        data = await res.json();
+      } catch {
+        data = null;
+      }
+      if (data && data.success) {
         setOpMsg('WebDAV上传成功');
       } else {
-        setOpMsg('WebDAV上传失败: ' + (data.error || '未知错误'));
+        setOpMsg('WebDAV上传失败: ' + (data?.error || '未知错误'));
       }
     } catch (e: any) {
       setOpMsg('WebDAV上传失败: ' + (e.message || e));
@@ -644,15 +649,20 @@ const App: React.FC = () => {
   // WebDAV下载（通过后端API）
   async function downloadFromWebDAV() {
     try {
-      const res = await fetch('/api/domain-backup');
-      const data = await res.json();
+      const res = await fetch('/api/backup');
+      let data;
+      try {
+        data = await res.json();
+      } catch {
+        data = null;
+      }
       if (Array.isArray(data)) {
         await saveDomains(data);
         setSelectedIndexes([]);
         loadDomains();
         setOpMsg('WebDAV导入成功！');
       } else {
-        setOpMsg('WebDAV下载失败: ' + (data.error || '未知错误'));
+        setOpMsg('WebDAV下载失败: ' + (data?.error || '未知错误'));
       }
     } catch (e: any) {
       setOpMsg('WebDAV下载失败: ' + (e.message || e));
