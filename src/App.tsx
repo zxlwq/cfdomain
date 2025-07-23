@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { fetchDomains, saveDomains, deleteDomain, notifyExpiring, Domain } from './api';
+import { useRef } from 'react';
 
 const STATUS_LABELS: Record<string, string> = {
   active: '正常',
@@ -69,7 +70,7 @@ const App: React.FC = () => {
   // 表单变更处理函数
   function handleFormChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
     const { id, value } = e.target;
-    setForm(prev => ({ ...prev, [id]: value }));
+    setForm((prev: Domain) => ({ ...prev, [id]: value }));
   }
 
   // 表单提交处理函数
@@ -88,14 +89,6 @@ const App: React.FC = () => {
     loadDomains();
     setOpMsg('保存成功');
   }
-
-  // 夜间模式
-  const [darkMode, setDarkMode] = useState(() => localStorage.getItem('darkMode') === 'true');
-  useEffect(() => {
-    document.body.style.backgroundColor = darkMode ? '#181818' : '';
-    document.body.className = darkMode ? 'dark' : '';
-    localStorage.setItem('darkMode', darkMode ? 'true' : 'false');
-  }, [darkMode]);
 
   // 自定义列显示
   const [showRegistrar, setShowRegistrar] = useState(true);
@@ -127,12 +120,45 @@ const App: React.FC = () => {
     loadDomains();
   }, []);
 
+  const [carouselImages, setCarouselImages] = useState<string[]>([]);
+  const carouselIndex = useRef(0);
+  const carouselTimer = useRef<NodeJS.Timeout | null>(null);
+
+  // 加载轮播图片列表
   useEffect(() => {
-    document.body.style.backgroundImage = `url('${bgImageUrl}')`;
-    document.body.style.backgroundSize = 'cover';
-    document.body.style.backgroundRepeat = 'no-repeat';
-    document.body.style.backgroundPosition = 'center center';
-  }, [bgImageUrl]);
+    fetch('/image/images.json')
+      .then(res => res.json())
+      .then((data: string[]) => setCarouselImages(data))
+      .catch(() => setCarouselImages(["/image/logo.png"]));
+  }, []);
+
+  // 轮播逻辑
+  useEffect(() => {
+    if (bgImageUrl && bgImageUrl.trim() !== '') {
+      // 用户自定义图片，直接显示
+      document.body.style.backgroundImage = `url('${bgImageUrl}')`;
+      if (carouselTimer.current) clearInterval(carouselTimer.current);
+      return;
+    }
+    // 轮播
+    if (carouselImages.length === 0) return;
+    function setBg(idx: number) {
+      const url = `/image/${carouselImages[idx]}`;
+      document.body.style.backgroundImage = `url('${url}')`;
+      document.body.style.backgroundSize = 'cover';
+      document.body.style.backgroundRepeat = 'no-repeat';
+      document.body.style.backgroundPosition = 'center center';
+    }
+    setBg(carouselIndex.current);
+    if (carouselTimer.current) clearInterval(carouselTimer.current);
+    carouselTimer.current = setInterval(() => {
+      carouselIndex.current = (carouselIndex.current + 1) % carouselImages.length;
+      setBg(carouselIndex.current);
+    }, 5000);
+    return () => {
+      if (carouselTimer.current) clearInterval(carouselTimer.current);
+    };
+  }, [bgImageUrl, carouselImages]);
 
   useEffect(() => {
     const remindedFlag = localStorage.getItem('dontRemindToday');
@@ -236,13 +262,13 @@ const App: React.FC = () => {
 
   // 6. 状态筛选与搜索
   function filteredDomains() {
-    let list = domains.filter(domain =>
+    let list = domains.filter((domain: Domain) =>
       domain.domain.toLowerCase().includes(search.toLowerCase()) ||
       domain.registrar.toLowerCase().includes(search.toLowerCase()) ||
       domain.status.toLowerCase().includes(search.toLowerCase())
     );
     if (sortField) {
-      list = [...list].sort((a, b) => {
+      list = [...list].sort((a: Domain, b: Domain) => {
         const valA = a[sortField as keyof Domain];
         const valB = b[sortField as keyof Domain];
         if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
@@ -251,7 +277,7 @@ const App: React.FC = () => {
       });
     } else {
       // 默认到期自动排序，快到期的排前面
-      list = [...list].sort((a, b) => new Date(a.expireDate).getTime() - new Date(b.expireDate).getTime());
+      list = [...list].sort((a: Domain, b: Domain) => new Date(a.expireDate).getTime() - new Date(b.expireDate).getTime());
     }
     return list;
   }
@@ -265,24 +291,24 @@ const App: React.FC = () => {
 
   // 统计
   const total = domains.length;
-  const active = domains.filter(d => d.status === 'active').length;
-  const expired = domains.filter(d => d.status === 'expired').length;
-  const avgProgress = total ? Math.round(domains.reduce((sum, d) => sum + calculateProgress(d.registerDate, d.expireDate), 0) / total) : 0;
+  const active = domains.filter((d: Domain) => d.status === 'active').length;
+  const expired = domains.filter((d: Domain) => d.status === 'expired').length;
+  const avgProgress = total ? Math.round(domains.reduce((sum: number, d: Domain) => sum + calculateProgress(d.registerDate, d.expireDate), 0) / total) : 0;
 
   function handleSelectAll(e: React.ChangeEvent<HTMLInputElement>) {
     if (e.target.checked) {
-      setSelectedIndexes(filteredDomains().map((_, idx) => idx));
+      setSelectedIndexes(filteredDomains().map((_: Domain, idx: number) => idx));
     } else {
       setSelectedIndexes([]);
     }
   }
   function handleSelectRow(idx: number, checked: boolean) {
-    setSelectedIndexes(prev => checked ? [...prev, idx] : prev.filter(i => i !== idx));
+    setSelectedIndexes((prev: number[]) => checked ? [...prev, idx] : prev.filter((i: number) => i !== idx));
   }
   async function handleBatchDelete() {
     if (selectedIndexes.length === 0) return alert('请先选择要删除的域名');
     if (!window.confirm('确定要批量删除选中的域名吗？')) return;
-    const newDomains = domains.filter((_, idx) => !selectedIndexes.includes(idx));
+    const newDomains = domains.filter((_: Domain, idx: number) => !selectedIndexes.includes(idx));
     await saveDomains(newDomains);
     setSelectedIndexes([]);
     loadDomains();
@@ -290,7 +316,7 @@ const App: React.FC = () => {
   }
   async function handleBatchSetStatus(status: string) {
     if (selectedIndexes.length === 0) return alert('请先选择要操作的域名');
-    const newDomains = domains.map((d, idx) => selectedIndexes.includes(idx) ? { ...d, status } : d);
+    const newDomains = domains.map((d: Domain, idx: number) => selectedIndexes.includes(idx) ? { ...d, status } : d);
     await saveDomains(newDomains);
     setSelectedIndexes([]);
     loadDomains();
@@ -389,13 +415,12 @@ const App: React.FC = () => {
   const totalPages = Math.ceil(filteredDomains().length / pageSize);
 
   return (
-    <div className={darkMode ? 'container dark' : 'container'}>
+    <div className="container">
       <div className="header">
         <h1>域名面板</h1>
         <p>查看域名状态、注册商、注册日期、过期日期和使用进度</p>
         <button className="settings-btn" onClick={() => alert('请在 Cloudflare Pages 环境变量中配置通知参数')}>⚙️</button>
         <button className="settings-btn" onClick={() => setSettingsOpen(true)}>⚙️</button>
-        <button className="btn" style={{ marginLeft: 10 }} onClick={() => setDarkMode(d => !d)}>{darkMode ? '☀️ 日间' : '🌙 夜间'}</button>
       </div>
       <div className="stats-grid">
         <div className="stat-card">
