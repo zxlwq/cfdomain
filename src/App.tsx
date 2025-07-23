@@ -61,6 +61,34 @@ const App: React.FC = () => {
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'expired' | 'pending'>('all');
   const editRowRef = React.useRef<HTMLTableRowElement>(null);
 
+  // 编辑相关状态
+  const [editIndex, setEditIndex] = useState<number>(-1);
+  const [form, setForm] = useState<Domain>(defaultDomain);
+  const [modalOpen, setModalOpen] = useState(false);
+
+  // 表单变更处理函数
+  function handleFormChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
+    const { id, value } = e.target;
+    setForm(prev => ({ ...prev, [id]: value }));
+  }
+
+  // 表单提交处理函数
+  async function handleFormSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    let newDomains = [...domains];
+    if (editIndex >= 0) {
+      newDomains[editIndex] = form;
+    } else {
+      newDomains.push(form);
+    }
+    await saveDomains(newDomains);
+    setModalOpen(false);
+    setEditIndex(-1);
+    setForm(defaultDomain);
+    loadDomains();
+    setOpMsg('保存成功');
+  }
+
   // 夜间模式
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem('darkMode') === 'true');
   useEffect(() => {
