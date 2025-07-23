@@ -658,7 +658,7 @@ const App: React.FC = () => {
                 <th>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <select
-                      style={{ height: 28, fontSize: 14, marginRight: 18 }}
+                      style={{ height: 28, fontSize: 14, marginRight: 32 }}
                       onChange={e => {
                         if (e.target.value === 'expired') handleBatchSetStatus('expired');
                         else if (e.target.value === 'active') handleBatchSetStatus('active');
@@ -712,10 +712,10 @@ const App: React.FC = () => {
                       <span className="progress-text">{progress}%</span>
                     </td>}
                     <td>
-                      <div className="action-buttons" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                        <button className="btn-edit" onClick={() => handleEdit(index + (page - 1) * pageSize)}>修改</button>
-                        <button className="btn-delete" onClick={() => handleDelete(index + (page - 1) * pageSize)}>删除</button>
-                        <button className="btn-renew" onClick={() => {
+                      <div className="action-buttons" style={{ display: 'flex', flexDirection: 'row', gap: 8 }}>
+                        <button className="btn-edit" style={{ width: 40, height: 40, padding: 0, textAlign: 'center' }} onClick={() => handleEdit(index + (page - 1) * pageSize)}>修改</button>
+                        <button className="btn-delete" style={{ width: 40, height: 40, padding: 0, textAlign: 'center' }} onClick={() => handleDelete(index + (page - 1) * pageSize)}>删除</button>
+                        <button className="btn-renew" style={{ width: 40, height: 40, padding: 0, textAlign: 'center' }} onClick={() => {
                           if (domain.renewUrl && domain.renewUrl.trim() !== '') {
                             window.open(domain.renewUrl, '_blank');
                           } else {
