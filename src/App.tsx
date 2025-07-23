@@ -280,8 +280,17 @@ const App: React.FC = () => {
     );
     if (sortField) {
       list = [...list].sort((a: Domain, b: Domain) => {
-        const valA = a[sortField as keyof Domain];
-        const valB = b[sortField as keyof Domain];
+        let valA: any = a[sortField as keyof Domain];
+        let valB: any = b[sortField as keyof Domain];
+        // 特殊处理到期天数和使用进度
+        if (sortField === 'daysLeft') {
+          valA = Math.ceil((new Date(a.expireDate).getTime() - Date.now()) / (24 * 60 * 60 * 1000));
+          valB = Math.ceil((new Date(b.expireDate).getTime() - Date.now()) / (24 * 60 * 60 * 1000));
+        }
+        if (sortField === 'progress') {
+          valA = calculateProgress(a.registerDate, a.expireDate);
+          valB = calculateProgress(b.registerDate, b.expireDate);
+        }
         if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
         if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
         return 0;
@@ -663,8 +672,8 @@ const App: React.FC = () => {
                 <th onClick={() => { setSortField('status'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }} className={`sortable ${getSortClass('status')}`} style={{ minWidth: 100 }}>状态</th>
                 <th onClick={() => { setSortField('registerDate'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }} className={`sortable ${getSortClass('registerDate')}`} style={{ minWidth: 110 }}>注册日期</th>
                 <th onClick={() => { setSortField('expireDate'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }} className={`sortable ${getSortClass('expireDate')}`} style={{ minWidth: 110 }}>过期日期</th>
-                <th onClick={() => { setSortField('daysLeft'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }} className={`sortable ${getSortClass('daysLeft')}`} style={{ minWidth: 120 }}>到期天数{sortField === 'daysLeft' ? (sortOrder === 'asc' ? '▲' : '▼') : ''}</th>
-                {showProgress && <th onClick={() => { setSortField('progress'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }} className={`sortable ${getSortClass('progress')}`} style={{ width: 120 }}>使用进度{sortField === 'progress' ? (sortOrder === 'asc' ? '▲' : '▼') : ''}</th>}
+                <th onClick={() => { setSortField('daysLeft'); setSortOrder(sortField === 'daysLeft' && sortOrder === 'asc' ? 'desc' : 'asc'); }} className={`sortable ${getSortClass('daysLeft')}`} style={{ minWidth: 120 }}>到期天数{sortField === 'daysLeft' ? (sortOrder === 'asc' ? '▲' : '▼') : ''}</th>
+                {showProgress && <th onClick={() => { setSortField('progress'); setSortOrder(sortField === 'progress' && sortOrder === 'asc' ? 'desc' : 'asc'); }} className={`sortable ${getSortClass('progress')}`} style={{ width: 120 }}>使用进度{sortField === 'progress' ? (sortOrder === 'asc' ? '▲' : '▼') : ''}</th>}
                 <th style={{ width: 140, position: 'relative' }}>
                   <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                     <span>操作</span>
