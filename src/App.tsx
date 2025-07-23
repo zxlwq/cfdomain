@@ -414,6 +414,120 @@ const App: React.FC = () => {
   const paged = pagedDomains(filteredDomains());
   const totalPages = Math.ceil(filteredDomains().length / pageSize);
 
+  // 导出CSV按钮直接下载
+  function handleExportClick() {
+    exportDomainsToCSV();
+  }
+  // 导入按钮弹出文件选择框，选中后自动导入
+  function handleImportClick() {
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+      fileInputRef.current.click();
+    }
+  }
+  // 文件选择后自动导入，支持多格式
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    if (!e.target.files || e.target.files.length === 0) {
+      setOpMsg('请先选择文件');
+      return;
+    }
+    const file = e.target.files[0];
+    const ext = file.name.split('.').pop()?.toLowerCase();
+    if (ext === 'csv' || ext === 'txt') {
+      const reader = new FileReader();
+      reader.onload = async function(evt) {
+        try {
+          const text = evt.target?.result as string;
+          const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
+          if (lines.length < 2) throw new Error('CSV文件内容无效');
+          const header = lines[0].split(',');
+          const expectedHeader = ['域名','注册商','注册日期','过期日期','状态'];
+          if (header.join(',') !== expectedHeader.join(',')) throw new Error('CSV表头格式不正确');
+          const newDomains = lines.slice(1).map(line => {
+            const cols = line.split(',');
+            return {
+              domain: cols[0],
+              registrar: cols[1],
+              registerDate: cols[2],
+              expireDate: cols[3],
+              status: (cols[4] === '正常') ? 'active' : (cols[4] === '已过期' ? 'expired' : 'pending')
+            };
+          });
+          await saveDomains(newDomains);
+          setSelectedIndexes([]);
+          loadDomains();
+          setOpMsg('导入成功！');
+        } catch (err: any) {
+          setOpMsg(err.message || '导入失败');
+        }
+      };
+      reader.readAsText(file, 'utf-8');
+    } else if (ext === 'json') {
+      const reader = new FileReader();
+      reader.onload = async function(evt) {
+        try {
+          const data = JSON.parse(evt.target?.result as string);
+          if (!Array.isArray(data)) throw new Error('JSON格式错误');
+          await saveDomains(data);
+          setSelectedIndexes([]);
+          loadDomains();
+          setOpMsg('导入成功！');
+        } catch {
+          setOpMsg('JSON格式无效或数据损坏');
+        }
+      };
+      reader.readAsText(file, 'utf-8');
+    } else {
+      setOpMsg('仅支持csv、json、txt格式');
+    }
+  }
+
+  // 导出多种格式
+  function handleExport(format: 'csv' | 'json' | 'txt') {
+    if (!domains || domains.length === 0) {
+      setOpMsg('暂无域名数据可导出');
+      return;
+    }
+    if (format === 'csv' || format === 'txt') {
+      try {
+        const header = ['域名','注册商','注册日期','过期日期','状态'];
+        const rows = domains.map((d: Domain) => [
+          d.domain,
+          d.registrar,
+          d.registerDate,
+          d.expireDate,
+          d.status === 'active' ? '正常' : d.status === 'expired' ? '已过期' : '待激活'
+        ]);
+        let content = header.join(',') + '\n' + rows.map((r: string[]) => r.join(',')).join('\n');
+        const blob = new Blob([content], { type: format === 'csv' ? 'text/csv;charset=utf-8;' : 'text/plain;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.setAttribute('href', url);
+        link.setAttribute('download', `domains.${format}`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        setOpMsg('导出成功');
+      } catch {
+        setOpMsg('导出失败');
+      }
+    } else if (format === 'json') {
+      try {
+        const blob = new Blob([JSON.stringify(domains, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.setAttribute('href', url);
+        link.setAttribute('download', 'domains.json');
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        setOpMsg('导出成功');
+      } catch {
+        setOpMsg('导出失败');
+      }
+    }
+  }
+
   return (
     <div className="container">
       <div className="header">
@@ -648,20 +762,16 @@ const App: React.FC = () => {
               <small style={{ color: '#666', fontSize: '0.9rem' }}>支持jpg/png/webp等图片格式，建议高清大图。</small>
             </div>
             <div className="settings-section">
-              <h4>📤 数据导入/导出</h4>
+              <h4>📤 域名数据导入/导出</h4>
               <div className="form-group">
-                <button className="btn btn-primary" onClick={exportDomainsToCSV}>导出域名文件（CSV）</button>
-                <button className="btn btn-secondary" onClick={exportDomainsToJSON} style={{ marginLeft: 8 }}>备份为JSON</button>
+                <span>导出格式：</span>
+                <button className="btn btn-primary" onClick={() => handleExport('csv')}>CSV</button>
+                <button className="btn btn-secondary" onClick={() => handleExport('json')} style={{ marginLeft: 8 }}>JSON</button>
+                <button className="btn btn-secondary" onClick={() => handleExport('txt')} style={{ marginLeft: 8 }}>TXT</button>
+                <button className="btn btn-secondary" onClick={handleImportClick} style={{ marginLeft: 16 }}>导入域名文件（CSV/JSON/TXT）</button>
+                <input type="file" ref={fileInputRef} accept=".csv,.json,.txt" style={{ display: 'none' }} onChange={handleFileChange} />
               </div>
-              <div className="form-group" style={{ marginTop: 10 }}>
-                <input type="file" ref={fileInputRef} accept=".csv" style={{ display: 'inline-block' }} />
-                <button className="btn btn-primary" onClick={importDomainsFromCSV}>导入域名文件（CSV）</button>
-              </div>
-              <div className="form-group" style={{ marginTop: 10 }}>
-                <input type="file" accept="application/json" onChange={importDomainsFromJSON} style={{ display: 'inline-block' }} />
-                <span style={{ fontSize: 12, color: '#888', marginLeft: 8 }}>恢复JSON备份</span>
-              </div>
-              <small style={{ color: '#666', fontSize: '0.9rem' }}>导出可将当前域名数据保存为CSV或JSON文件，导入/恢复会覆盖当前所有域名数据。</small>
+              <small style={{ color: '#666', fontSize: '0.9rem' }}>支持csv、json、txt格式，导入会覆盖当前所有域名数据。</small>
             </div>
             <div className="modal-buttons">
               <button className="btn btn-secondary" onClick={() => setSettingsOpen(false)}>关闭</button>
