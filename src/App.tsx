@@ -667,7 +667,7 @@ const App: React.FC = () => {
                   <span style={{ fontSize: 12, marginLeft: 2 }}>{sortField === 'daysLeft' ? (sortOrder === 'asc' ? '▲' : '▼') : '△'}</span>
                 </th>
                 {showProgress && <th style={{ width: 120 }}>使用进度</th>}
-                <th style={{ width: 36 }}><input type="checkbox" onChange={handleSelectAll} checked={selectedIndexes.length === paged.length && paged.length > 0} /></th>
+                <th style={{ width: 140 }}>操作</th>
                 <th style={{ minWidth: 120 }}>
                   <select
                     style={{ height: 28, fontSize: 14, marginRight: 0 }}
@@ -685,14 +685,14 @@ const App: React.FC = () => {
                     <option value="delete">批量删除</option>
                   </select>
                 </th>
-                <th style={{ width: 140 }}>操作</th>
+                <th style={{ width: 36 }}><input type="checkbox" onChange={handleSelectAll} checked={selectedIndexes.length === paged.length && paged.length > 0} /></th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={showRegistrar && showProgress ? 10 : 8} className="loading">加载中...</td></tr>
+                <tr><td colSpan={showRegistrar && showProgress ? 11 : 9} className="loading">加载中...</td></tr>
               ) : paged.length === 0 ? (
-                <tr><td colSpan={showRegistrar && showProgress ? 10 : 8} className="loading">暂无域名数据</td></tr>
+                <tr><td colSpan={showRegistrar && showProgress ? 11 : 9} className="loading">暂无域名数据</td></tr>
               ) : paged.map((domain, index) => {
                 const progress = calculateProgress(domain.registerDate, domain.expireDate);
                 const progressClass = getProgressClass(progress);
@@ -715,7 +715,6 @@ const App: React.FC = () => {
                       </div>
                       <span className="progress-text">{progress}%</span>
                     </td>}
-                    <td><input type="checkbox" checked={checked} onChange={e => handleSelectRow(index + (page - 1) * pageSize, e.target.checked)} /></td>
                     <td>
                       <div className="action-buttons" style={{ display: 'flex', flexDirection: 'row', gap: 8 }}>
                         <button className="btn-edit" style={{ width: 56, height: 40, padding: 0, textAlign: 'center' }} onClick={() => handleEdit(index + (page - 1) * pageSize)}>修改</button>
@@ -729,6 +728,10 @@ const App: React.FC = () => {
                         }}>续期</button>
                       </div>
                     </td>
+                    <td><select
+                      style={{ display: 'none' }}
+                    /></td>
+                    <td><input type="checkbox" checked={checked} onChange={e => handleSelectRow(index + (page - 1) * pageSize, e.target.checked)} /></td>
                   </tr>
                 );
               })}
