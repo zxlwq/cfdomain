@@ -42,13 +42,7 @@ const defaultDomain: Domain = {
 };
 
 const App: React.FC = () => {
-  const [domains, setDomains] = useState<Domain[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [editIndex, setEditIndex] = useState<number>(-1);
-  const [form, setForm] = useState<Domain>(defaultDomain);
-  const [search, setSearch] = useState('');
-  const [sortField, setSortField] = useState<string | null>(null);
+@@ -41,11 +52,76 @@
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [expireModal, setExpireModal] = useState(false);
   const [expiringDomains, setExpiringDomains] = useState<Domain[]>([]);
@@ -63,12 +57,40 @@ const App: React.FC = () => {
   const todayStr = new Date().toISOString().slice(0, 10);
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'expired' | 'pending'>('all');
   const editRowRef = React.useRef<HTMLTableRowElement>(null);
+
+  // 夜间模式
+  const [darkMode, setDarkMode] = useState(() => localStorage.getItem('darkMode') === 'true');
+  useEffect(() => {
+    document.body.style.backgroundColor = darkMode ? '#181818' : '';
+    document.body.className = darkMode ? 'dark' : '';
+    localStorage.setItem('darkMode', darkMode ? 'true' : 'false');
+  }, [darkMode]);
+
+  // 自定义列显示
   const [showRegistrar, setShowRegistrar] = useState(true);
   const [showProgress, setShowProgress] = useState(true);
-  const [darkMode, setDarkMode] = useState(() => localStorage.getItem('darkMode') === 'true');
+
+  // 分页
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
-  const [totalPages, setTotalPages] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const pagedDomains = (list: Domain[]) => list.slice((page - 1) * pageSize, page * pageSize);
+
+  // 虚拟滚动（简易）
+  const [scrollTop, setScrollTop] = useState(0);
+  const rowHeight = 48;
+  const visibleCount = Math.ceil(window.innerHeight / rowHeight);
+  function handleTableScroll(e: React.UIEvent<HTMLDivElement>) {
+    setScrollTop(e.currentTarget.scrollTop);
+  }
+
+  // 操作提示
+  const [opMsg, setOpMsg] = useState('');
+  useEffect(() => {
+    if (opMsg) {
+      const t = setTimeout(() => setOpMsg(''), 2000);
+      return () => clearTimeout(t);
+    }
+  }, [opMsg]);
 
   useEffect(() => {
     loadDomains();
@@ -79,8 +101,7 @@ const App: React.FC = () => {
     document.body.style.backgroundSize = 'cover';
     document.body.style.backgroundRepeat = 'no-repeat';
     document.body.style.backgroundPosition = 'center center';
-    document.body.className = darkMode ? 'dark-mode' : '';
-  }, [bgImageUrl, darkMode]);
+  }, [bgImageUrl]);
 
   useEffect(() => {
     const remindedFlag = localStorage.getItem('dontRemindToday');
@@ -98,16 +119,11 @@ const App: React.FC = () => {
   async function loadDomains() {
     setLoading(true);
     try {
-      const data = await fetchDomains();
-      setDomains(data);
-      checkExpiringDomains(data);
-    } catch {
-      setDomains([]);
-    }
-    setLoading(false);
+@@ -59,15 +135,15 @@
   }
 
   function checkExpiringDomains(domains: Domain[]) {
+    const warningDays = 15;
     const warningDays = parseInt(localStorage.getItem('notificationWarningDays') || '15', 10);
     const today = new Date();
     const warningDate = new Date(today.getTime() + warningDays * 24 * 60 * 60 * 1000);
@@ -116,62 +132,36 @@ const App: React.FC = () => {
       return expireDate <= warningDate && expireDate >= today;
     });
     setExpiringDomains(expiring);
+    if (expiring.length > 0) {
     if (expiring.length > 0 && !dontRemindToday) {
       setExpireModal(true);
       notifyExpiring(expiring);
     }
-  }
-
-  function handleEdit(index: number) {
-    setEditIndex(index);
-    setForm(domains[index]);
-    setModalOpen(true);
-  }
-
-  function handleDelete(index: number) {
-    if (!window.confirm('确定要删除该域名吗？')) return;
-    const domain = domains[index];
-    deleteDomain(domain.domain).then(() => {
-      loadDomains();
-    });
-  }
-
-  function handleAdd() {
-    setEditIndex(-1);
-    setForm(defaultDomain);
-    setModalOpen(true);
-  }
-
-  function handleFormChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
-    setForm({ ...form, [e.target.id]: e.target.value });
-  }
-
-  async function handleFormSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    let newDomains = [...domains];
-    if (editIndex >= 0) {
-      newDomains[editIndex] = form;
-    } else {
-      newDomains.push(form);
-    }
-    await saveDomains(newDomains);
-    setModalOpen(false);
+@@ -110,11 +186,51 @@
     loadDomains();
   }
 
   // 5. 数据本地备份与恢复
   function exportDomainsToJSON() {
-    const blob = new Blob([JSON.stringify(domains, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', 'domains-backup.json');
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    try {
+      const blob = new Blob([JSON.stringify(domains, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', 'domains-backup.json');
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setOpMsg('备份成功');
+    } catch {
+      setOpMsg('备份失败');
+    }
   }
   function importDomainsFromJSON(e: React.ChangeEvent<HTMLInputElement>) {
-    if (!e.target.files || e.target.files.length === 0) return;
+    if (!e.target.files || e.target.files.length === 0) {
+      setOpMsg('请先选择JSON文件');
+      return;
+    }
     const file = e.target.files[0];
     const reader = new FileReader();
     reader.onload = async function(evt) {
@@ -181,17 +171,20 @@ const App: React.FC = () => {
         await saveDomains(data);
         setSelectedIndexes([]);
         loadDomains();
-        alert('恢复成功！');
+        setOpMsg('恢复成功！');
       } catch {
-        alert('JSON格式无效或数据损坏');
+        setOpMsg('JSON格式无效或数据损坏');
       }
     };
     reader.readAsText(file, 'utf-8');
   }
 
-  // 6. 状态筛选与搜索 + 7. 到期自动排序 + 8. 分页
+  // 6. 状态筛选与搜索
   function filteredDomains() {
     let list = domains.filter(domain =>
+      domain.domain.toLowerCase().includes(search.toLowerCase()) ||
+      domain.registrar.toLowerCase().includes(search.toLowerCase()) ||
+      domain.status.toLowerCase().includes(search.toLowerCase())
       (filterStatus === 'all' || domain.status === filterStatus) &&
       (domain.domain.toLowerCase().includes(search.toLowerCase()) ||
         domain.registrar.toLowerCase().includes(search.toLowerCase()) ||
@@ -199,16 +192,7 @@ const App: React.FC = () => {
     );
     if (sortField) {
       list = [...list].sort((a, b) => {
-        let valA: any = a[sortField as keyof Domain];
-        let valB: any = b[sortField as keyof Domain];
-        if (sortField === 'registerDate' || sortField === 'expireDate') {
-          valA = new Date(valA).getTime();
-          valB = new Date(valB).getTime();
-        } else {
-          valA = (valA || '').toString().toLowerCase();
-          valB = (valB || '').toString().toLowerCase();
-        }
-        if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
+@@ -131,22 +247,152 @@
         if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
         return 0;
       });
@@ -216,8 +200,7 @@ const App: React.FC = () => {
       // 默认到期自动排序，快到期的排前面
       list = [...list].sort((a, b) => new Date(a.expireDate).getTime() - new Date(b.expireDate).getTime());
     }
-    setTotalPages(Math.max(1, Math.ceil(list.length / pageSize)));
-    return list.slice((page - 1) * pageSize, page * pageSize);
+    return list;
   }
 
   // 7. 域名编辑体验优化
@@ -250,7 +233,7 @@ const App: React.FC = () => {
     await saveDomains(newDomains);
     setSelectedIndexes([]);
     loadDomains();
-    alert('批量删除成功！');
+    setOpMsg('批量删除成功');
   }
   async function handleBatchSetStatus(status: string) {
     if (selectedIndexes.length === 0) return alert('请先选择要操作的域名');
@@ -258,7 +241,7 @@ const App: React.FC = () => {
     await saveDomains(newDomains);
     setSelectedIndexes([]);
     loadDomains();
-    alert('批量状态修改成功！');
+    setOpMsg('批量状态修改成功');
   }
 
   function saveNotificationSettings() {
@@ -279,7 +262,7 @@ const App: React.FC = () => {
 
   function exportDomainsToCSV() {
     if (!domains || domains.length === 0) {
-      alert('暂无域名数据可导出');
+      setOpMsg('暂无域名数据可导出');
       return;
     }
     try {
@@ -300,15 +283,14 @@ const App: React.FC = () => {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      alert('导出成功！');
+      setOpMsg('导出成功');
     } catch {
-      alert('导出失败，请重试');
+      setOpMsg('导出失败');
     }
   }
-
   function importDomainsFromCSV() {
     if (!fileInputRef.current || !fileInputRef.current.files || fileInputRef.current.files.length === 0) {
-      alert('请先选择CSV文件');
+      setOpMsg('请先选择CSV文件');
       return;
     }
     const file = fileInputRef.current.files[0];
@@ -317,16 +299,10 @@ const App: React.FC = () => {
       try {
         const text = e.target?.result as string;
         const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
-        if (lines.length < 2) {
-          alert('CSV文件内容无效');
-          return;
-        }
+        if (lines.length < 2) throw new Error('CSV文件内容无效');
         const header = lines[0].split(',');
         const expectedHeader = ['域名','注册商','注册日期','过期日期','状态'];
-        if (header.join(',') !== expectedHeader.join(',')) {
-          alert('CSV表头格式不正确，请使用系统导出的CSV模板');
-          return;
-        }
+        if (header.join(',') !== expectedHeader.join(',')) throw new Error('CSV表头格式不正确');
         const newDomains = lines.slice(1).map(line => {
           const cols = line.split(',');
           return {
@@ -340,9 +316,9 @@ const App: React.FC = () => {
         await saveDomains(newDomains);
         setSelectedIndexes([]);
         loadDomains();
-        alert('导入成功！');
-      } catch {
-        alert('导入失败，文件格式或内容有误');
+        setOpMsg('导入成功！');
+      } catch (err: any) {
+        setOpMsg(err.message || '导入失败');
       }
     };
     reader.readAsText(file, 'utf-8');
@@ -355,50 +331,27 @@ const App: React.FC = () => {
 
   const isMobile = window.innerWidth <= 768;
 
+  // 分页数据
+  const paged = pagedDomains(filteredDomains());
+  const totalPages = Math.ceil(filteredDomains().length / pageSize);
+
   return (
     <div className="container">
+    <div className={darkMode ? 'container dark' : 'container'}>
       <div className="header">
         <h1>域名面板</h1>
         <p>查看域名状态、注册商、注册日期、过期日期和使用进度</p>
+        <button className="settings-btn" onClick={() => alert('请在 Cloudflare Pages 环境变量中配置通知参数')}>⚙️</button>
         <button className="settings-btn" onClick={() => setSettingsOpen(true)}>⚙️</button>
-        <button className="btn" style={{ marginLeft: 10 }} onClick={() => { setDarkMode(d => { localStorage.setItem('darkMode', (!d).toString()); return !d; }); }}>{darkMode ? '☀️ 亮色' : '🌙 夜间'}</button>
+        <button className="btn" style={{ marginLeft: 10 }} onClick={() => setDarkMode(d => !d)}>{darkMode ? '☀️ 日间' : '🌙 夜间'}</button>
       </div>
       <div className="stats-grid">
         <div className="stat-card">
-          <div className="stat-number">{total}</div>
-          <div className="stat-label">总域名数</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-number">{active}</div>
-          <div className="stat-label">正常域名</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-number">{expired}</div>
-          <div className="stat-label">已过期域名</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-number">{avgProgress}%</div>
-          <div className="stat-label">平均使用进度</div>
-        </div>
-      </div>
-      {expiringDomains.length > 0 && (
-        <div className="expiring-domains" style={{ marginBottom: 20 }}>
-          <h4 style={{ color: '#856404' }}>⚠️ 即将到期的域名</h4>
-          {expiringDomains.map(domain => {
-            const expireDate = new Date(domain.expireDate);
-            const daysLeft = Math.ceil((expireDate.getTime() - Date.now()) / (24 * 60 * 60 * 1000));
-            return (
-              <div className="expiring-domain" key={domain.domain}>
-                <div className="domain-info">
-                  <div className="domain-name">{domain.domain}</div>
-                  <div>注册商：{domain.registrar} | 到期：{domain.expireDate}</div>
-                </div>
-                <div className="days-left" style={{ color: daysLeft <= 7 ? '#dc3545' : daysLeft <= 30 ? '#fd7e14' : '#28a745', fontWeight: 600 }}>{daysLeft}天后到期</div>
-              </div>
-            );
+@@ -184,53 +430,75 @@
           })}
         </div>
       )}
+      <div className="domain-table">
       <div className="domain-table" style={isMobile ? { fontSize: 12 } : {}}>
         <div className="table-header">
           <h2>域名列表</h2>
@@ -410,26 +363,34 @@ const App: React.FC = () => {
             <button className={`btn ${filterStatus === 'active' ? 'btn-primary' : ''}`} onClick={() => setFilterStatus('active')}>正常</button>
             <button className={`btn ${filterStatus === 'expired' ? 'btn-primary' : ''}`} onClick={() => setFilterStatus('expired')}>已过期</button>
             <button className={`btn ${filterStatus === 'pending' ? 'btn-primary' : ''}`} onClick={() => setFilterStatus('pending')}>待激活</button>
-            <button className="btn" onClick={() => setShowRegistrar(v => !v)}>{showRegistrar ? '隐藏注册商' : '显示注册商'}</button>
-            <button className="btn" onClick={() => setShowProgress(v => !v)}>{showProgress ? '隐藏进度' : '显示进度'}</button>
           </div>
         </div>
-        <div style={{ margin: '10px 0', display: 'flex', gap: 10, flexDirection: isMobile ? 'column' : 'row' }}>
+        <div style={{ margin: '10px 0', display: 'flex', gap: 10, flexDirection: isMobile ? 'column' : 'row', flexWrap: 'wrap' }}>
           <button className="btn btn-danger" style={isMobile ? { width: '100%' } : {}} onClick={handleBatchDelete}>批量删除</button>
           <button className="btn btn-secondary" style={isMobile ? { width: '100%' } : {}} onClick={() => handleBatchSetStatus('expired')}>批量标记为已过期</button>
           <button className="btn btn-primary" style={isMobile ? { width: '100%' } : {}} onClick={() => handleBatchSetStatus('active')}>批量标记为正常</button>
         </div>
-        <div className="table-container" style={isMobile ? { overflowX: 'auto' } : {}}>
+        <div className="table-container">
+          <table>
+        <div className="table-container" style={isMobile ? { overflowX: 'auto', maxHeight: 480, position: 'relative' } : {}} onScroll={handleTableScroll}>
           <table style={isMobile ? { minWidth: 700 } : {}}>
             <thead>
               <tr>
-                <th style={{ width: 36 }}><input type="checkbox" onChange={handleSelectAll} checked={selectedIndexes.length === filteredDomains().length && filteredDomains().length > 0} /></th>
+                <th></th>
+                <th onClick={() => { setSortField('domain'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }} className="sortable">域名</th>
+                <th onClick={() => { setSortField('status'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }} className="sortable">状态</th>
+                <th onClick={() => { setSortField('registrar'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }} className="sortable">注册商</th>
+                <th onClick={() => { setSortField('registerDate'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }} className="sortable">注册日期</th>
+                <th onClick={() => { setSortField('expireDate'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }} className="sortable">过期日期</th>
+                <th>使用进度</th>
+                <th>操作</th>
+                <th style={{ width: 36 }}><input type="checkbox" onChange={handleSelectAll} checked={selectedIndexes.length === paged.length && paged.length > 0} /></th>
                 <th onClick={() => { setSortField('domain'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }} className={`sortable ${getSortClass('domain')}`}>域名</th>
+                {showRegistrar && <th onClick={() => { setSortField('registrar'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }} className={`sortable ${getSortClass('registrar')}`}>注册商</th>}
                 <th onClick={() => { setSortField('status'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }} className={`sortable ${getSortClass('status')}`}>状态</th>
-                <th onClick={() => { setSortField('registrar'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }} className={`sortable ${getSortClass('registrar')}`} style={{ display: showRegistrar ? undefined : 'none' }}>注册商</th>
                 <th onClick={() => { setSortField('registerDate'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }} className={`sortable ${getSortClass('registerDate')}`}>注册日期</th>
                 <th onClick={() => { setSortField('expireDate'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }} className={`sortable ${getSortClass('expireDate')}`}>过期日期</th>
-                <th style={{ width: 120, display: showProgress ? undefined : 'none' }}>使用进度</th>
+                {showProgress && <th style={{ width: 120 }}>使用进度</th>}
                 <th style={{ width: 140 }}>操作</th>
               </tr>
             </thead>
@@ -437,29 +398,42 @@ const App: React.FC = () => {
               {loading ? (
                 <tr><td colSpan={8} className="loading">加载中...</td></tr>
               ) : filteredDomains().length === 0 ? (
+              ) : paged.length === 0 ? (
                 <tr><td colSpan={8} className="loading">暂无域名数据</td></tr>
               ) : filteredDomains().map((domain, index) => {
+              ) : paged.map((domain, index) => {
                 const progress = calculateProgress(domain.registerDate, domain.expireDate);
                 const progressClass = getProgressClass(progress);
-                const checked = selectedIndexes.includes(index);
+                const checked = selectedIndexes.includes(index + (page - 1) * pageSize);
+                const expireDate = new Date(domain.expireDate);
+                const daysLeft = Math.ceil((expireDate.getTime() - Date.now()) / (24 * 60 * 60 * 1000));
+                let daysColor = daysLeft <= 7 ? '#dc3545' : daysLeft <= 30 ? '#fd7e14' : '#28a745';
                 return (
+                  <tr key={domain.domain}>
+                    <td></td>
                   <tr key={domain.domain} className={editIndex === index ? 'editing-row' : ''} ref={editIndex === index ? editRowRef : undefined}>
-                    <td><input type="checkbox" checked={checked} onChange={e => handleSelectRow(index, e.target.checked)} /></td>
+                    <td><input type="checkbox" checked={checked} onChange={e => handleSelectRow(index + (page - 1) * pageSize, e.target.checked)} /></td>
                     <td className="domain-name">{domain.domain}</td>
+                    {showRegistrar && <td className="registrar">{domain.registrar}</td>}
                     <td><span className={`status ${domain.status}`}>{STATUS_LABELS[domain.status]}</span></td>
-                    <td className="registrar" style={{ display: showRegistrar ? undefined : 'none' }}>{domain.registrar}</td>
+                    <td className="registrar">{domain.registrar}</td>
                     <td className="date">{domain.registerDate}</td>
                     <td className="date">{domain.expireDate}</td>
-                    <td style={{ display: showProgress ? undefined : 'none' }}>
+                    <td>
+                    <td className="date">{domain.expireDate} <span style={{ color: daysColor, fontWeight: 600, marginLeft: 4 }}>{daysLeft}天</span></td>
+                    {showProgress && <td>
                       <div className="progress-bar">
                         <div className={`progress-fill ${progressClass}`} style={{ width: progress + '%' }}></div>
                       </div>
                       <span className="progress-text">{progress}%</span>
                     </td>
+                    </td>}
                     <td>
                       <div className="action-buttons">
                         <button className="btn-edit" onClick={() => handleEdit(index)}>修改</button>
                         <button className="btn-delete" onClick={() => handleDelete(index)}>删除</button>
+                        <button className="btn-edit" onClick={() => handleEdit(index + (page - 1) * pageSize)}>修改</button>
+                        <button className="btn-delete" onClick={() => handleDelete(index + (page - 1) * pageSize)}>删除</button>
                         <button className="btn-renew" onClick={() => {
                           if (domain.renewUrl && domain.renewUrl.trim() !== '') {
                             window.open(domain.renewUrl, '_blank');
@@ -470,41 +444,33 @@ const App: React.FC = () => {
                       </div>
                     </td>
                   </tr>
-                );
-              })}
+@@ -239,11 +507,24 @@
             </tbody>
           </table>
         </div>
+        <div style={{ margin: '10px 0', display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+          <span>每页</span>
+          <select value={pageSize} onChange={e => { setPageSize(Number(e.target.value)); setPage(1); }}>
+            {[10, 20, 50, 100].map(size => <option key={size} value={size}>{size}</option>)}
+          </select>
+          <span>条</span>
+          <button className="btn" disabled={page === 1} onClick={() => setPage(p => Math.max(1, p - 1))}>上一页</button>
+          <span>第 {page} / {totalPages} 页</span>
+          <button className="btn" disabled={page === totalPages} onClick={() => setPage(p => Math.min(totalPages, p + 1))}>下一页</button>
+          <label style={{ marginLeft: 16 }}><input type="checkbox" checked={showRegistrar} onChange={e => setShowRegistrar(e.target.checked)} />显示注册商</label>
+          <label style={{ marginLeft: 8 }}><input type="checkbox" checked={showProgress} onChange={e => setShowProgress(e.target.checked)} />显示进度</label>
+        </div>
+        {opMsg && <div style={{ position: 'fixed', top: 20, left: '50%', transform: 'translateX(-50%)', background: '#333', color: '#fff', padding: '8px 24px', borderRadius: 8, zIndex: 9999 }}>{opMsg}</div>}
       </div>
       <button className="add-domain-btn" onClick={handleAdd}>+</button>
       {modalOpen && (
         <div className="modal" style={{ display: 'block' }} onClick={e => { if (e.target === e.currentTarget) setModalOpen(false); }}>
+          <div className="modal-content">
           <div className="modal-content" style={isMobile ? { width: '98%', padding: 10 } : {}}>
             <div className="modal-header">
               <h3>{editIndex >= 0 ? '编辑域名' : '添加新域名'}</h3>
             </div>
-            <form onSubmit={handleFormSubmit}>
-              <div className="form-group">
-                <label htmlFor="domain">域名</label>
-                <input id="domain" value={form.domain} onChange={handleFormChange} required />
-              </div>
-              <div className="form-group">
-                <label htmlFor="registrar">注册商</label>
-                <input id="registrar" value={form.registrar} onChange={handleFormChange} required />
-              </div>
-              <div className="form-group">
-                <label htmlFor="registerDate">注册日期</label>
-                <input id="registerDate" type="date" value={form.registerDate} onChange={handleFormChange} required />
-              </div>
-              <div className="form-group">
-                <label htmlFor="expireDate">过期日期</label>
-                <input id="expireDate" type="date" value={form.expireDate} onChange={handleFormChange} required />
-              </div>
-              <div className="form-group">
-                <label htmlFor="status">状态</label>
-                <select id="status" value={form.status} onChange={handleFormChange} required>
-                  <option value="active">正常</option>
-                  <option value="expired">已过期</option>
+@@ -272,6 +553,10 @@
                   <option value="pending">待激活</option>
                 </select>
               </div>
@@ -515,29 +481,20 @@ const App: React.FC = () => {
               <div className="modal-buttons">
                 <button type="button" className="btn btn-secondary" onClick={() => setModalOpen(false)}>取消</button>
                 <button type="submit" className="btn btn-primary">保存</button>
-              </div>
-            </form>
-          </div>
-        </div>
+@@ -282,7 +567,7 @@
       )}
       {expireModal && (
         <div className="modal" style={{ display: 'block' }} onClick={e => { if (e.target === e.currentTarget) setExpireModal(false); }}>
+          <div className="modal-content">
           <div className="modal-content" style={isMobile ? { width: '98%', padding: 10 } : {}}>
             <div className="modal-header">
               <h3>⚠️ 域名到期提醒</h3>
             </div>
-            <div style={{ margin: '20px 0' }}>
-              {expiringDomains.map(domain => {
-                const expireDate = new Date(domain.expireDate);
-                const daysLeft = Math.ceil((expireDate.getTime() - Date.now()) / (24 * 60 * 60 * 1000));
-                return (
-                  <div key={domain.domain} style={{ marginBottom: 10 }}>
-                    <b>{domain.domain}</b>（{daysLeft}天后到期）<br />注册商：{domain.registrar}，到期日：{domain.expireDate}
-                  </div>
-                );
+@@ -298,7 +583,76 @@
               })}
             </div>
             <div className="modal-buttons">
+              <button className="btn btn-primary" onClick={() => setExpireModal(false)}>我知道了</button>
               <button className="btn btn-primary" onClick={() => handleCloseExpireModal(false)}>我知道了</button>
               <button className="btn btn-secondary" onClick={() => handleCloseExpireModal(true)}>今日不再弹出</button>
             </div>
@@ -611,17 +568,3 @@ const App: React.FC = () => {
             </div>
           </div>
         </div>
-      )}
-      <div style={{ margin: '20px 0', textAlign: 'center' }}>
-        <button className="btn" disabled={page === 1} onClick={() => setPage(p => Math.max(1, p - 1))}>上一页</button>
-        <span style={{ margin: '0 10px' }}>第 {page} / {totalPages} 页</span>
-        <button className="btn" disabled={page === totalPages} onClick={() => setPage(p => Math.min(totalPages, p + 1))}>下一页</button>
-        <select value={pageSize} onChange={e => { setPageSize(Number(e.target.value)); setPage(1); }} style={{ marginLeft: 10 }}>
-          {[10, 20, 50, 100].map(size => <option key={size} value={size}>{size}条/页</option>)}
-        </select>
-      </div>
-    </div>
-  );
-};
-
-export default App; 
