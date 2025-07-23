@@ -428,7 +428,7 @@ const App: React.FC = () => {
       fileInputRef.current.click();
     }
   }
-  // 文件选择后自动导入，支持多格式
+  // 升级后的CSV导入逻辑，支持灵活表头
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     if (!e.target.files || e.target.files.length === 0) {
       setOpMsg('请先选择文件');
@@ -443,17 +443,34 @@ const App: React.FC = () => {
           const text = evt.target?.result as string;
           const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
           if (lines.length < 2) throw new Error('CSV文件内容无效');
-          const header = lines[0].split(',');
-          const expectedHeader = ['域名','注册商','注册日期','过期日期','状态'];
-          if (header.join(',') !== expectedHeader.join(',')) throw new Error('CSV表头格式不正确');
+          // 允许中英文表头、顺序任意、允许多余字段
+          const header = lines[0].split(',').map(h => h.trim());
+          // 支持的字段映射
+          const fieldMap: Record<string, string> = {
+            '域名': 'domain', 'Domain': 'domain',
+            '注册商': 'registrar', 'Registrar': 'registrar',
+            '注册日期': 'registerDate', 'Registration Date': 'registerDate',
+            '过期日期': 'expireDate', 'Expiration Date': 'expireDate',
+            '状态': 'status', 'Status': 'status'
+          };
+          // 找到每个字段在header中的索引
+          const colIdx: Partial<Record<'domain'|'registrar'|'registerDate'|'expireDate'|'status', number>> = {};
+          Object.entries(fieldMap).forEach(([k, v]) => {
+            const idx = header.findIndex(h => h === k);
+            if (idx !== -1 && colIdx[v] === undefined) colIdx[v] = idx;
+          });
+          if (colIdx.domain === undefined || colIdx.registrar === undefined || colIdx.registerDate === undefined || colIdx.expireDate === undefined || colIdx.status === undefined) {
+            throw new Error('CSV表头需包含：域名/Domain, 注册商/Registrar, 注册日期/Registration Date, 过期日期/Expiration Date, 状态/Status');
+          }
           const newDomains = lines.slice(1).map(line => {
             const cols = line.split(',');
             return {
-              domain: cols[0],
-              registrar: cols[1],
-              registerDate: cols[2],
-              expireDate: cols[3],
-              status: (cols[4] === '正常') ? 'active' : (cols[4] === '已过期' ? 'expired' : 'pending')
+              domain: cols[colIdx.domain!],
+              registrar: cols[colIdx.registrar!],
+              registerDate: cols[colIdx.registerDate!],
+              expireDate: cols[colIdx.expireDate!],
+              status: (cols[colIdx.status!] === '正常' || cols[colIdx.status!] === 'active' || cols[colIdx.status!].toLowerCase() === 'active') ? 'active' :
+                      (cols[colIdx.status!] === '已过期' || cols[colIdx.status!] === 'expired' || cols[colIdx.status!].toLowerCase() === 'expired') ? 'expired' : 'pending'
             };
           });
           await saveDomains(newDomains);
@@ -531,6 +548,15 @@ const App: React.FC = () => {
     }
   }
 
+  // 统计卡片样式
+  const statNumberStyle = {
+    fontSize: '2.6rem',
+    color: '#007bff', // 与批量标记为正常按钮一致
+    fontWeight: 700,
+    margin: 0,
+    lineHeight: 1.1
+  };
+
   return (
     <div className="container">
       <div className="header">
@@ -542,19 +568,19 @@ const App: React.FC = () => {
       <div className="stats-grid">
         <div className="stat-card">
           <h3>总域名数</h3>
-          <p>{total}</p>
+          <p style={statNumberStyle}>{total}</p>
         </div>
         <div className="stat-card">
           <h3>正常域名</h3>
-          <p>{active}</p>
+          <p style={statNumberStyle}>{active}</p>
         </div>
         <div className="stat-card">
           <h3>已过期域名</h3>
-          <p>{expired}</p>
+          <p style={statNumberStyle}>{expired}</p>
         </div>
         <div className="stat-card">
           <h3>平均使用进度</h3>
-          <p>{avgProgress}%</p>
+          <p style={statNumberStyle}>{avgProgress}%</p>
         </div>
       </div>
       <div className="domain-table" style={isMobile ? { fontSize: 12 } : {}}>
@@ -562,12 +588,6 @@ const App: React.FC = () => {
           <h2>域名列表</h2>
           <div className="search-box">
             <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="搜索域名..." />
-          </div>
-          <div style={{ marginTop: 10, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-            <button className={`btn ${filterStatus === 'all' ? 'btn-primary' : ''}`} onClick={() => setFilterStatus('all')}>全部</button>
-            <button className={`btn ${filterStatus === 'active' ? 'btn-primary' : ''}`} onClick={() => setFilterStatus('active')}>正常</button>
-            <button className={`btn ${filterStatus === 'expired' ? 'btn-primary' : ''}`} onClick={() => setFilterStatus('expired')}>已过期</button>
-            <button className={`btn ${filterStatus === 'pending' ? 'btn-primary' : ''}`} onClick={() => setFilterStatus('pending')}>待激活</button>
           </div>
         </div>
         <div style={{ margin: '10px 0', display: 'flex', gap: 10, flexDirection: isMobile ? 'column' : 'row', flexWrap: 'wrap' }}>
@@ -644,8 +664,6 @@ const App: React.FC = () => {
           <button className="btn" disabled={page === 1} onClick={() => setPage(p => Math.max(1, p - 1))}>上一页</button>
           <span>第 {page} / {totalPages} 页</span>
           <button className="btn" disabled={page === totalPages} onClick={() => setPage(p => Math.min(totalPages, p + 1))}>下一页</button>
-          <label style={{ marginLeft: 16 }}><input type="checkbox" checked={showRegistrar} onChange={e => setShowRegistrar(e.target.checked)} />显示注册商</label>
-          <label style={{ marginLeft: 8 }}><input type="checkbox" checked={showProgress} onChange={e => setShowProgress(e.target.checked)} />显示进度</label>
         </div>
         {opMsg && <div style={{ position: 'fixed', top: 20, left: '50%', transform: 'translateX(-50%)', background: '#333', color: '#fff', padding: '8px 24px', borderRadius: 8, zIndex: 9999 }}>{opMsg}</div>}
       </div>
