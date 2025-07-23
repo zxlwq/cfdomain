@@ -623,6 +623,60 @@ const App: React.FC = () => {
   // 1. 樱花粉按钮样式
   const sakuraBtnStyle = { backgroundColor: '#ffb6c1', borderColor: '#ffb6c1', color: '#fff' };
 
+  // WebDAV上传
+  async function uploadToWebDAV() {
+    try {
+      const url = import.meta.env.VITE_WEBDAV_URL;
+      const username = import.meta.env.VITE_WEBDAV_USERNAME;
+      const password = import.meta.env.VITE_WEBDAV_PASSWORD;
+      if (!url || !username || !password) {
+        setOpMsg('请先在Cloudflare Pages环境变量中配置WebDAV信息');
+        return;
+      }
+      const fileUrl = url.replace(/\/$/, '') + '/domain/domains-backup.json';
+      const res = await fetch(fileUrl, {
+        method: 'PUT',
+        headers: {
+          'Authorization': 'Basic ' + btoa(username + ':' + password),
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(domains, null, 2)
+      });
+      if (!res.ok) throw new Error('WebDAV上传失败');
+      setOpMsg('WebDAV上传成功');
+    } catch (e) {
+      setOpMsg('WebDAV上传失败: ' + (e.message || e));
+    }
+  }
+  // WebDAV下载
+  async function downloadFromWebDAV() {
+    try {
+      const url = import.meta.env.VITE_WEBDAV_URL;
+      const username = import.meta.env.VITE_WEBDAV_USERNAME;
+      const password = import.meta.env.VITE_WEBDAV_PASSWORD;
+      if (!url || !username || !password) {
+        setOpMsg('请先在Cloudflare Pages环境变量中配置WebDAV信息');
+        return;
+      }
+      const fileUrl = url.replace(/\/$/, '') + '/domain/domains-backup.json';
+      const res = await fetch(fileUrl, {
+        method: 'GET',
+        headers: {
+          'Authorization': 'Basic ' + btoa(username + ':' + password)
+        }
+      });
+      if (!res.ok) throw new Error('WebDAV下载失败');
+      const data = await res.json();
+      if (!Array.isArray(data)) throw new Error('WebDAV文件内容无效');
+      await saveDomains(data);
+      setSelectedIndexes([]);
+      loadDomains();
+      setOpMsg('WebDAV导入成功！');
+    } catch (e) {
+      setOpMsg('WebDAV下载失败: ' + (e.message || e));
+    }
+  }
+
   return (
     <div className="container">
       <div className="header">
@@ -888,8 +942,10 @@ const App: React.FC = () => {
                 <button className="btn btn-primary" onClick={() => handleExport(exportFormat)} style={{ marginRight: 24 }}>导出域名文件</button>
                 <button className="btn btn-secondary" style={{ ...sakuraBtnStyle }} onClick={handleImportClick}>导入域名文件</button>
                 <input type="file" ref={fileInputRef} accept=".csv,.json,.txt" style={{ display: 'none' }} onChange={handleFileChange} />
+                <button className="btn btn-primary" style={{ marginLeft: 8 }} onClick={uploadToWebDAV}>WebDAV上传</button>
+                <button className="btn btn-secondary" style={{ ...sakuraBtnStyle }} onClick={downloadFromWebDAV}>WebDAV下载</button>
               </div>
-              <small style={{ color: '#666', fontSize: '0.9rem' }}>支持csv、json、txt格式，导入会覆盖当前所有域名数据。</small>
+              <small style={{ color: '#666', fontSize: '0.9rem' }}>支持csv、json、txt格式，导入会覆盖当前所有域名数据。WebDAV参数请在Cloudflare Pages环境变量中配置：VITE_WEBDAV_URL、VITE_WEBDAV_USERNAME、VITE_WEBDAV_PASSWORD。</small>
             </div>
             <div className="modal-buttons">
               <button className="btn btn-secondary" style={{ ...sakuraBtnStyle }} onClick={() => setSettingsOpen(false)}>关闭</button>
