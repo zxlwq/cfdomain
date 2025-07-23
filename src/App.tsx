@@ -640,7 +640,7 @@ const App: React.FC = () => {
           <p style={statNumberStyle}>{avgProgress}%</p>
         </div>
       </div>
-      <div className="domain-table" style={{ ...(isMobile ? { fontSize: 12 } : {}), width: '100%', maxWidth: 2000, minWidth: 0, margin: '0 auto', overflowX: 'visible' }}>
+      <div className="domain-table" style={{ ...(isMobile ? { fontSize: 12 } : {}), width: '100%', minWidth: 0, margin: '0 auto', overflowX: 'visible' }}>
         <div className="table-header">
           <h2>域名列表</h2>
           <div className="search-box">
