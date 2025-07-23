@@ -665,25 +665,27 @@ const App: React.FC = () => {
                 <th onClick={() => { setSortField('expireDate'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }} className={`sortable ${getSortClass('expireDate')}`} style={{ minWidth: 110 }}>过期日期</th>
                 <th onClick={() => { setSortField('daysLeft'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }} className={`sortable ${getSortClass('daysLeft')}`} style={{ minWidth: 120 }}>到期天数{sortField === 'daysLeft' ? (sortOrder === 'asc' ? '▲' : '▼') : ''}</th>
                 {showProgress && <th onClick={() => { setSortField('progress'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }} className={`sortable ${getSortClass('progress')}`} style={{ width: 120 }}>使用进度{sortField === 'progress' ? (sortOrder === 'asc' ? '▲' : '▼') : ''}</th>}
-                <th style={{ width: 140 }}>操作</th>
-                <th style={{ width: 24, paddingLeft: 0, paddingRight: 0 }}><input type="checkbox" onChange={handleSelectAll} checked={selectedIndexes.length === paged.length && paged.length > 0} /></th>
-                <th style={{ minWidth: 80 }}>
-                  <select
-                    style={{ height: 28, fontSize: 14, marginRight: 0 }}
-                    onChange={e => {
-                      if (e.target.value === 'expired') handleBatchSetStatus('expired');
-                      else if (e.target.value === 'active') handleBatchSetStatus('active');
-                      else if (e.target.value === 'delete') handleBatchDelete();
-                      e.target.value = '';
-                    }}
-                    defaultValue=""
-                  >
-                    <option value="" disabled>批量操作</option>
-                    <option value="expired">批量为已过期</option>
-                    <option value="active">批量为正常</option>
-                    <option value="delete">批量删除</option>
-                  </select>
+                <th style={{ width: 140, position: 'relative' }}>
+                  <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                    <span>操作</span>
+                    <select
+                      style={{ height: 28, fontSize: 14, marginLeft: 2 }}
+                      onChange={e => {
+                        if (e.target.value === 'expired') handleBatchSetStatus('expired');
+                        else if (e.target.value === 'active') handleBatchSetStatus('active');
+                        else if (e.target.value === 'delete') handleBatchDelete();
+                        e.target.value = '';
+                      }}
+                      defaultValue=""
+                    >
+                      <option value="" disabled>批量操作</option>
+                      <option value="expired">批量为已过期</option>
+                      <option value="active">批量为正常</option>
+                      <option value="delete">批量删除</option>
+                    </select>
+                  </div>
                 </th>
+                <th style={{ width: 24, paddingLeft: 0, paddingRight: 0 }}><input type="checkbox" onChange={handleSelectAll} checked={selectedIndexes.length === paged.length && paged.length > 0} /></th>
               </tr>
             </thead>
             <tbody>
