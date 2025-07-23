@@ -428,7 +428,7 @@ const App: React.FC = () => {
       fileInputRef.current.click();
     }
   }
-  // 升级后的CSV导入逻辑，支持灵活表头
+  // 升级后的CSV导入逻辑，支持更宽松的表头和引号处理
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     if (!e.target.files || e.target.files.length === 0) {
       setOpMsg('请先选择文件');
@@ -443,27 +443,37 @@ const App: React.FC = () => {
           const text = evt.target?.result as string;
           const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
           if (lines.length < 2) throw new Error('CSV文件内容无效');
-          // 允许中英文表头、顺序任意、允许多余字段
-          const header = lines[0].split(',').map(h => h.trim());
-          // 支持的字段映射
-          const fieldMap: Record<string, string> = {
-            '域名': 'domain', 'Domain': 'domain',
-            '注册商': 'registrar', 'Registrar': 'registrar',
-            '注册日期': 'registerDate', 'Registration Date': 'registerDate',
-            '过期日期': 'expireDate', 'Expiration Date': 'expireDate',
-            '状态': 'status', 'Status': 'status'
+          // 处理引号和逗号分隔
+          function parseCSVLine(line: string) {
+            // 简单处理：去除每个字段前后的引号和空格
+            return line.split(',').map(cell => cell.replace(/^"|"$/g, '').trim());
+          }
+          const headerRaw = parseCSVLine(lines[0]);
+          // 字段名归一化函数
+          function norm(s: string) {
+            return s.replace(/^"|"$/g, '').replace(/[_\s-]/g, '').toLowerCase();
+          }
+          // 字段映射表，支持多种写法
+          const fieldMap: Record<string, 'domain'|'registrar'|'registerDate'|'expireDate'|'status'|undefined> = {
+            '域名': 'domain', 'domain': 'domain',
+            '注册商': 'registrar', 'registrar': 'registrar',
+            '注册日期': 'registerDate', 'registrationdate': 'registerDate', 'registerdate': 'registerDate', 'register_date': 'registerDate',
+            '过期日期': 'expireDate', 'expirationdate': 'expireDate', 'expiredate': 'expireDate', 'expire_date': 'expireDate',
+            '状态': 'status', 'status': 'status'
           };
+          // 归一化后的header
+          const headerNorm = headerRaw.map(norm);
           // 找到每个字段在header中的索引
           const colIdx: Partial<Record<'domain'|'registrar'|'registerDate'|'expireDate'|'status', number>> = {};
-          Object.entries(fieldMap).forEach(([k, v]) => {
-            const idx = header.findIndex(h => h === k);
-            if (idx !== -1 && colIdx[v] === undefined) colIdx[v] = idx;
+          headerNorm.forEach((h, idx) => {
+            const mapped = fieldMap[h];
+            if (mapped && colIdx[mapped] === undefined) colIdx[mapped] = idx;
           });
           if (colIdx.domain === undefined || colIdx.registrar === undefined || colIdx.registerDate === undefined || colIdx.expireDate === undefined || colIdx.status === undefined) {
-            throw new Error('CSV表头需包含：域名/Domain, 注册商/Registrar, 注册日期/Registration Date, 过期日期/Expiration Date, 状态/Status');
+            throw new Error('CSV表头需包含：域名/domain，注册商/registrar，注册日期/register_date，过期日期/expire_date，状态/status（支持多种写法）');
           }
           const newDomains = lines.slice(1).map(line => {
-            const cols = line.split(',');
+            const cols = parseCSVLine(line);
             return {
               domain: cols[colIdx.domain!],
               registrar: cols[colIdx.registrar!],
@@ -557,6 +567,9 @@ const App: React.FC = () => {
     lineHeight: 1.1
   };
 
+  // 1. 樱花粉按钮样式
+  const sakuraBtnStyle = { backgroundColor: '#ffb6c1', borderColor: '#ffb6c1', color: '#fff' };
+
   return (
     <div className="container">
       <div className="header">
@@ -592,7 +605,7 @@ const App: React.FC = () => {
         </div>
         <div style={{ margin: '10px 0', display: 'flex', gap: 10, flexDirection: isMobile ? 'column' : 'row', flexWrap: 'wrap' }}>
           <button className="btn btn-danger" style={isMobile ? { width: '100%' } : {}} onClick={handleBatchDelete}>批量删除</button>
-          <button className="btn btn-secondary" style={isMobile ? { width: '100%' } : {}} onClick={() => handleBatchSetStatus('expired')}>批量标记为已过期</button>
+          <button className="btn btn-secondary" style={{ ...sakuraBtnStyle, width: isMobile ? '100%' : undefined }} onClick={() => handleBatchSetStatus('expired')}>批量标记为已过期</button>
           <button className="btn btn-primary" style={isMobile ? { width: '100%' } : {}} onClick={() => handleBatchSetStatus('active')}>批量标记为正常</button>
         </div>
         <div className="table-container" style={isMobile ? { overflowX: 'auto', maxHeight: 480, position: 'relative' } : {}} onScroll={handleTableScroll}>
@@ -655,7 +668,7 @@ const App: React.FC = () => {
             </tbody>
           </table>
         </div>
-        <div style={{ margin: '10px 0', display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+        <div style={{ margin: '10px 0', display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center' }}>
           <span>每页</span>
           <select value={pageSize} onChange={e => { setPageSize(Number(e.target.value)); setPage(1); }}>
             {[10, 20, 50, 100].map(size => <option key={size} value={size}>{size}</option>)}
@@ -792,7 +805,7 @@ const App: React.FC = () => {
                   <option value="txt">TXT</option>
                 </select>
                 <button className="btn btn-primary" onClick={() => handleExport(exportFormat)} style={{ marginRight: 24 }}>导出域名文件</button>
-                <button className="btn btn-secondary" onClick={handleImportClick}>导入域名文件（CSV/JSON/TXT）</button>
+                <button className="btn btn-secondary" onClick={handleImportClick} style={{ ...sakuraBtnStyle }}>导入域名文件</button>
                 <input type="file" ref={fileInputRef} accept=".csv,.json,.txt" style={{ display: 'none' }} onChange={handleFileChange} />
               </div>
               <small style={{ color: '#666', fontSize: '0.9rem' }}>支持csv、json、txt格式，导入会覆盖当前所有域名数据。</small>
