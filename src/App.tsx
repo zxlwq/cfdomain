@@ -124,11 +124,16 @@ const App: React.FC = () => {
   const carouselIndex = useRef(0);
   const carouselTimer = useRef<NodeJS.Timeout | null>(null);
 
-  // 加载轮播图片列表
+  // 加载轮播图片列表，修复fetch空内容报错
   useEffect(() => {
     fetch('/image/images.json')
-      .then(res => res.json())
-      .then((data: string[]) => setCarouselImages(data))
+      .then(res => res.text())
+      .then(txt => {
+        let data: string[] = [];
+        try { data = JSON.parse(txt); } catch {}
+        if (!Array.isArray(data) || data.length === 0) data = ["background.jpeg"];
+        setCarouselImages(data);
+      })
       .catch(() => setCarouselImages(["background.jpeg"]));
   }, []);
 
@@ -136,7 +141,7 @@ const App: React.FC = () => {
   useEffect(() => {
     if (bgImageUrl && bgImageUrl.trim() !== '') {
       // 用户自定义图片，直接显示
-      document.body.style.backgroundImage = `url('${bgImageUrl}')`;
+    document.body.style.backgroundImage = `url('${bgImageUrl}')`;
       if (carouselTimer.current) clearInterval(carouselTimer.current);
       return;
     }
@@ -145,9 +150,9 @@ const App: React.FC = () => {
     function setBg(idx: number) {
       const url = `/image/${carouselImages[idx]}`;
       document.body.style.backgroundImage = `url('${url}')`;
-      document.body.style.backgroundSize = 'cover';
-      document.body.style.backgroundRepeat = 'no-repeat';
-      document.body.style.backgroundPosition = 'center center';
+    document.body.style.backgroundSize = 'cover';
+    document.body.style.backgroundRepeat = 'no-repeat';
+    document.body.style.backgroundPosition = 'center center';
     }
     setBg(carouselIndex.current);
     if (carouselTimer.current) clearInterval(carouselTimer.current);
@@ -217,7 +222,7 @@ const App: React.FC = () => {
     const domainToDelete = domains[index];
     if (window.confirm(`确定要删除域名 "${domainToDelete.domain}" 吗？`)) {
       deleteDomain(domainToDelete.id || 0);
-      loadDomains();
+    loadDomains();
       setOpMsg('域名删除成功');
     }
   }
@@ -333,10 +338,16 @@ const App: React.FC = () => {
     localStorage.setItem('customBgImageUrl', bgImageUrl);
     alert('背景图片已保存');
   }
+  // 恢复默认背景图片逻辑
   function resetBgImage() {
-    setBgImageUrl('/image/logo.png');
+    setBgImageUrl(''); // 输入框清空
     localStorage.removeItem('customBgImageUrl');
-    alert('已恢复默认背景');
+    // 立即切换为默认背景
+    document.body.style.backgroundImage = `url('/image/background.jpeg')`;
+    document.body.style.backgroundSize = 'cover';
+    document.body.style.backgroundRepeat = 'no-repeat';
+    document.body.style.backgroundPosition = 'center center';
+    setOpMsg('已恢复默认背景');
   }
 
   function exportDomainsToCSV() {
@@ -674,9 +685,9 @@ const App: React.FC = () => {
             {[10, 20, 50, 100].map(size => <option key={size} value={size}>{size}</option>)}
           </select>
           <span>条</span>
-          <button className="btn" disabled={page === 1} onClick={() => setPage(p => Math.max(1, p - 1))}>上一页</button>
+          <button className="btn" style={{ ...sakuraBtnStyle }} disabled={page === 1} onClick={() => setPage(p => Math.max(1, p - 1))}>上一页</button>
           <span>第 {page} / {totalPages} 页</span>
-          <button className="btn" disabled={page === totalPages} onClick={() => setPage(p => Math.min(totalPages, p + 1))}>下一页</button>
+          <button className="btn" style={{ ...sakuraBtnStyle }} disabled={page === totalPages} onClick={() => setPage(p => Math.min(totalPages, p + 1))}>下一页</button>
         </div>
         {opMsg && <div style={{ position: 'fixed', top: 20, left: '50%', transform: 'translateX(-50%)', background: '#333', color: '#fff', padding: '8px 24px', borderRadius: 8, zIndex: 9999 }}>{opMsg}</div>}
       </div>
@@ -805,13 +816,13 @@ const App: React.FC = () => {
                   <option value="txt">TXT</option>
                 </select>
                 <button className="btn btn-primary" onClick={() => handleExport(exportFormat)} style={{ marginRight: 24 }}>导出域名文件</button>
-                <button className="btn btn-secondary" onClick={handleImportClick} style={{ ...sakuraBtnStyle }}>导入域名文件</button>
+                <button className="btn btn-secondary" style={{ ...sakuraBtnStyle }} onClick={handleImportClick}>导入域名文件</button>
                 <input type="file" ref={fileInputRef} accept=".csv,.json,.txt" style={{ display: 'none' }} onChange={handleFileChange} />
               </div>
               <small style={{ color: '#666', fontSize: '0.9rem' }}>支持csv、json、txt格式，导入会覆盖当前所有域名数据。</small>
             </div>
             <div className="modal-buttons">
-              <button className="btn btn-secondary" onClick={() => setSettingsOpen(false)}>关闭</button>
+              <button className="btn btn-secondary" style={{ ...sakuraBtnStyle }} onClick={() => setSettingsOpen(false)}>关闭</button>
             </div>
           </div>
         </div>
