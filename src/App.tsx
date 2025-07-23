@@ -640,7 +640,7 @@ const App: React.FC = () => {
           <p style={statNumberStyle}>{avgProgress}%</p>
         </div>
       </div>
-      <div className="domain-table" style={{ ...(isMobile ? { fontSize: 12 } : {}), maxWidth: 1200, margin: '0 auto' }}>
+      <div className="domain-table" style={{ ...(isMobile ? { fontSize: 12 } : {}), maxWidth: 1400, margin: '0 auto' }}>
         <div className="table-header">
           <h2>域名列表</h2>
           <div className="search-box">
@@ -685,7 +685,7 @@ const App: React.FC = () => {
                     <option value="delete">批量删除</option>
                   </select>
                 </th>
-                <th style={{ width: 36 }}><input type="checkbox" onChange={handleSelectAll} checked={selectedIndexes.length === paged.length && paged.length > 0} /></th>
+                <th style={{ width: 36, paddingLeft: 0, paddingRight: 0 }}><input type="checkbox" onChange={handleSelectAll} checked={selectedIndexes.length === paged.length && paged.length > 0} /></th>
               </tr>
             </thead>
             <tbody>
@@ -731,7 +731,7 @@ const App: React.FC = () => {
                     <td><select
                       style={{ display: 'none' }}
                     /></td>
-                    <td><input type="checkbox" checked={checked} onChange={e => handleSelectRow(index + (page - 1) * pageSize, e.target.checked)} /></td>
+                    <td style={{ width: 36, paddingLeft: 0, paddingRight: 0 }}><input type="checkbox" checked={checked} onChange={e => handleSelectRow(index + (page - 1) * pageSize, e.target.checked)} /></td>
                   </tr>
                 );
               })}
