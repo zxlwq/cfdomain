@@ -64,13 +64,7 @@ const App: React.FC = () => {
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'expired' | 'pending'>('all');
   const editRowRef = React.useRef<HTMLTableRowElement>(null);
 
-  // 夜间模式
-  const [darkMode, setDarkMode] = useState(() => localStorage.getItem('darkMode') === 'true');
-  useEffect(() => {
-    document.body.style.backgroundColor = darkMode ? '#181818' : '';
-    document.body.className = darkMode ? 'dark' : '';
-    localStorage.setItem('darkMode', darkMode ? 'true' : 'false');
-  }, [darkMode]);
+  // 夜间模式相关代码已移除
 
   // 自定义列显示
   const [showRegistrar, setShowRegistrar] = useState(true);
@@ -155,12 +149,24 @@ const App: React.FC = () => {
     setModalOpen(true);
   }
 
-  function handleDelete(index: number) {
+  // 4. 操作日志/历史记录
+  const [logs, setLogs] = useState<{ time: string; action: string; detail: string }[]>(() => {
+    const saved = localStorage.getItem('domainLogs');
+    return saved ? JSON.parse(saved) : [];
+  });
+  function addLog(action: string, detail: string) {
+    const newLogs = [{ time: new Date().toLocaleString(), action, detail }, ...logs].slice(0, 100);
+    setLogs(newLogs);
+    localStorage.setItem('domainLogs', JSON.stringify(newLogs));
+  }
+  // 在所有增删改操作后调用 addLog
+  async function handleDelete(index: number) {
     if (!window.confirm('确定要删除该域名吗？')) return;
     const domain = domains[index];
-    deleteDomain(domain.domain).then(() => {
-      loadDomains();
-    });
+    await deleteDomain(domain.domain);
+    addLog('删除', domain.domain);
+    loadDomains();
+    setOpMsg('删除成功');
   }
 
   function handleAdd() {
@@ -177,13 +183,16 @@ const App: React.FC = () => {
     e.preventDefault();
     let newDomains = [...domains];
     if (editIndex >= 0) {
+      addLog('修改', form.domain);
       newDomains[editIndex] = form;
     } else {
+      addLog('添加', form.domain);
       newDomains.push(form);
     }
     await saveDomains(newDomains);
     setModalOpen(false);
     loadDomains();
+    setOpMsg('保存成功');
   }
 
   // 5. 数据本地备份与恢复
@@ -285,6 +294,7 @@ const App: React.FC = () => {
     setSelectedIndexes([]);
     loadDomains();
     setOpMsg('批量删除成功');
+    addLog('批量删除', selectedIndexes.map(idx => domains[idx]?.domain).filter(Boolean).join(', '));
   }
   async function handleBatchSetStatus(status: string) {
     if (selectedIndexes.length === 0) return alert('请先选择要操作的域名');
@@ -293,6 +303,7 @@ const App: React.FC = () => {
     setSelectedIndexes([]);
     loadDomains();
     setOpMsg('批量状态修改成功');
+    addLog('批量状态修改', selectedIndexes.map(idx => domains[idx]?.domain).filter(Boolean).join(', ') + ' -> ' + status);
   }
 
   function saveNotificationSettings() {
@@ -387,12 +398,11 @@ const App: React.FC = () => {
   const totalPages = Math.ceil(filteredDomains().length / pageSize);
 
   return (
-    <div className={darkMode ? 'container dark' : 'container'}>
+    <div className="container">
       <div className="header">
         <h1>域名面板</h1>
         <p>查看域名状态、注册商、注册日期、过期日期和使用进度</p>
         <button className="settings-btn" onClick={() => setSettingsOpen(true)}>⚙️</button>
-        <button className="btn" style={{ marginLeft: 10 }} onClick={() => setDarkMode(d => !d)}>{darkMode ? '☀️ 日间' : '🌙 夜间'}</button>
       </div>
       <div className="stats-grid">
         <div className="stat-card">
@@ -410,6 +420,13 @@ const App: React.FC = () => {
         <div className="stat-card">
           <div className="stat-number">{avgProgress}%</div>
           <div className="stat-label">平均使用进度</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-number">{domains.filter(d => {
+            const days = Math.ceil((new Date(d.expireDate).getTime() - Date.now()) / (24 * 60 * 60 * 1000));
+            return days <= 7 && days >= 0;
+          }).length}</div>
+          <div className="stat-label">7天内到期</div>
         </div>
       </div>
       {expiringDomains.length > 0 && (
@@ -431,6 +448,20 @@ const App: React.FC = () => {
         </div>
       )}
       <div className="domain-table" style={isMobile ? { fontSize: 12 } : {}}>
+        {/* 操作日志面板 */}
+        <div style={{ margin: '10px 0', background: '#f8f9fa', borderRadius: 8, padding: 12 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontWeight: 600 }}>操作日志（最近100条）</span>
+            <button className="btn btn-danger" style={{ fontSize: 12 }} onClick={clearLogs}>清空日志</button>
+          </div>
+          <div style={{ maxHeight: 120, overflowY: 'auto', fontSize: 12, marginTop: 6 }}>
+            {logs.length === 0 ? <span style={{ color: '#888' }}>暂无日志</span> : logs.map((log, i) => (
+              <div key={i} style={{ color: '#555', marginBottom: 2 }}>
+                <span style={{ color: '#888' }}>{log.time}</span> | <b>{log.action}</b> <span>{log.detail}</span>
+              </div>
+            ))}
+          </div>
+        </div>
         <div className="table-header">
           <h2>域名列表</h2>
           <div className="search-box">
