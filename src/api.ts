@@ -9,7 +9,13 @@ export interface Domain {
 
 export async function fetchDomains(): Promise<Domain[]> {
   const res = await fetch('/functions/domains');
-  const data = await res.json();
+  const text = await res.text();
+  let data: any = {};
+  try {
+    data = text ? JSON.parse(text) : {};
+  } catch {
+    data = {};
+  }
   if (data.success) return data.domains;
   throw new Error(data.error || '获取域名失败');
 }
@@ -20,8 +26,14 @@ export async function saveDomains(domains: Domain[]): Promise<void> {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ domains })
   });
-  const data = await res.json();
-  if (!data.success) throw new Error(data.error || '保存失败');
+  const text = await res.text();
+  let data: any = {};
+  try {
+    data = text ? JSON.parse(text) : {};
+  } catch {
+    data = {};
+  }
+  if (!data.success && text) throw new Error(data.error || '保存失败');
 }
 
 export async function deleteDomain(domain: string): Promise<void> {
@@ -30,8 +42,14 @@ export async function deleteDomain(domain: string): Promise<void> {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ domain })
   });
-  const data = await res.json();
-  if (!data.success) throw new Error(data.error || '删除失败');
+  const text = await res.text();
+  let data: any = {};
+  try {
+    data = text ? JSON.parse(text) : {};
+  } catch {
+    data = {};
+  }
+  if (!data.success && text) throw new Error(data.error || '删除失败');
 }
 
 export async function notifyExpiring(domains: Domain[]): Promise<void> {
