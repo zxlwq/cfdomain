@@ -54,7 +54,7 @@ const App: React.FC = () => {
   const [warningDays, setWarningDays] = useState(() => localStorage.getItem('notificationWarningDays') || '15');
   const [notificationEnabled, setNotificationEnabled] = useState(() => localStorage.getItem('notificationEnabled') || 'true');
   const [notificationInterval, setNotificationInterval] = useState(() => localStorage.getItem('notificationInterval') || 'daily');
-  const [bgImageUrl, setBgImageUrl] = useState(() => localStorage.getItem('customBgImageUrl') || '/image/logo.png');
+  const [bgImageUrl, setBgImageUrl] = useState(() => localStorage.getItem('customBgImageUrl') || '');
   const [selectedIndexes, setSelectedIndexes] = useState<number[]>([]);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [dontRemindToday, setDontRemindToday] = useState(false);
@@ -129,7 +129,7 @@ const App: React.FC = () => {
     fetch('/image/images.json')
       .then(res => res.json())
       .then((data: string[]) => setCarouselImages(data))
-      .catch(() => setCarouselImages(["/image/logo.png"]));
+      .catch(() => setCarouselImages(["background.jpeg"]));
   }, []);
 
   // 轮播逻辑
@@ -154,7 +154,7 @@ const App: React.FC = () => {
     carouselTimer.current = setInterval(() => {
       carouselIndex.current = (carouselIndex.current + 1) % carouselImages.length;
       setBg(carouselIndex.current);
-    }, 5000);
+    }, 30000); // 30秒切换
     return () => {
       if (carouselTimer.current) clearInterval(carouselTimer.current);
     };
