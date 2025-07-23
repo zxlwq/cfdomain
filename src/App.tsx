@@ -640,7 +640,7 @@ const App: React.FC = () => {
           <p style={statNumberStyle}>{avgProgress}%</p>
         </div>
       </div>
-      <div className="domain-table" style={isMobile ? { fontSize: 12 } : {}}>
+      <div className="domain-table" style={{ ...(isMobile ? { fontSize: 12 } : {}), maxWidth: 1200, margin: '0 auto' }}>
         <div className="table-header">
           <h2>域名列表</h2>
           <div className="search-box">
@@ -660,10 +660,10 @@ const App: React.FC = () => {
                   </div>
                 </th>
                 <th onClick={() => { setSortField('registrar'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }} className={`sortable ${getSortClass('registrar')}`}>注册商</th>
-                <th onClick={() => { setSortField('status'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }} className={`sortable ${getSortClass('status')}`}>状态</th>
+                <th onClick={() => { setSortField('status'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }} className={`sortable ${getSortClass('status')}`} style={{ minWidth: 100 }}>状态</th>
                 <th onClick={() => { setSortField('registerDate'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }} className={`sortable ${getSortClass('registerDate')}`} style={{ minWidth: 110 }}>注册日期</th>
                 <th onClick={() => { setSortField('expireDate'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }} className={`sortable ${getSortClass('expireDate')}`} style={{ minWidth: 110 }}>过期日期</th>
-                <th onClick={() => { setSortField('daysLeft'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }} className={`sortable ${getSortClass('daysLeft')}`} style={{ minWidth: 90 }}>到期天数
+                <th onClick={() => { setSortField('daysLeft'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }} className={`sortable ${getSortClass('daysLeft')}`} style={{ minWidth: 120 }}>到期天数
                   <span style={{ fontSize: 12, marginLeft: 2 }}>{sortField === 'daysLeft' ? (sortOrder === 'asc' ? '▲' : '▼') : '△'}</span>
                 </th>
                 {showProgress && <th style={{ width: 120 }}>使用进度</th>}
