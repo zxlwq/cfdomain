@@ -8,7 +8,7 @@ export interface Domain {
 }
 
 export async function fetchDomains(): Promise<Domain[]> {
-  const res = await fetch('/functions/domains');
+  const res = await fetch('/api/domains');
   const text = await res.text();
   let data: any = {};
   try {
@@ -21,7 +21,7 @@ export async function fetchDomains(): Promise<Domain[]> {
 }
 
 export async function saveDomains(domains: Domain[]): Promise<void> {
-  const res = await fetch('/functions/domains', {
+  const res = await fetch('/api/domains', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ domains })
@@ -37,7 +37,7 @@ export async function saveDomains(domains: Domain[]): Promise<void> {
 }
 
 export async function deleteDomain(domain: string): Promise<void> {
-  const res = await fetch('/functions/domains', {
+  const res = await fetch('/api/domains', {
     method: 'DELETE',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ domain })
