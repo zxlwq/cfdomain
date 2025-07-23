@@ -414,6 +414,9 @@ const App: React.FC = () => {
   const paged = pagedDomains(filteredDomains());
   const totalPages = Math.ceil(filteredDomains().length / pageSize);
 
+  // 导出格式下拉框
+  const [exportFormat, setExportFormat] = useState<'csv' | 'json' | 'txt'>('csv');
+
   // 导出CSV按钮直接下载
   function handleExportClick() {
     exportDomainsToCSV();
@@ -763,12 +766,15 @@ const App: React.FC = () => {
             </div>
             <div className="settings-section">
               <h4>📤 域名数据导入/导出</h4>
-              <div className="form-group">
-                <span>导出格式：</span>
-                <button className="btn btn-primary" onClick={() => handleExport('csv')}>CSV</button>
-                <button className="btn btn-secondary" onClick={() => handleExport('json')} style={{ marginLeft: 8 }}>JSON</button>
-                <button className="btn btn-secondary" onClick={() => handleExport('txt')} style={{ marginLeft: 8 }}>TXT</button>
-                <button className="btn btn-secondary" onClick={handleImportClick} style={{ marginLeft: 16 }}>导入域名文件（CSV/JSON/TXT）</button>
+              <div className="form-group" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 12 }}>
+                <label htmlFor="exportFormat" style={{ marginRight: 8 }}>导出格式：</label>
+                <select id="exportFormat" value={exportFormat} onChange={e => setExportFormat(e.target.value as 'csv' | 'json' | 'txt')} style={{ minWidth: 90, marginRight: 8 }}>
+                  <option value="csv">CSV</option>
+                  <option value="json">JSON</option>
+                  <option value="txt">TXT</option>
+                </select>
+                <button className="btn btn-primary" onClick={() => handleExport(exportFormat)} style={{ marginRight: 24 }}>导出域名文件</button>
+                <button className="btn btn-secondary" onClick={handleImportClick}>导入域名文件（CSV/JSON/TXT）</button>
                 <input type="file" ref={fileInputRef} accept=".csv,.json,.txt" style={{ display: 'none' }} onChange={handleFileChange} />
               </div>
               <small style={{ color: '#666', fontSize: '0.9rem' }}>支持csv、json、txt格式，导入会覆盖当前所有域名数据。</small>
