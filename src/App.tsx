@@ -340,40 +340,10 @@ const App: React.FC = () => {
     localStorage.setItem('notificationInterval', notificationInterval);
     alert('通知设置已保存');
   }
-  // 新增：下载图片并保存到public/image
-  async function downloadAndSaveImage(url: string): Promise<string | null> {
-    try {
-      const res = await fetch(url);
-      if (!res.ok) throw new Error('图片下载失败');
-      const blob = await res.blob();
-      // 自动生成文件名
-      const ext = url.split('.').pop()?.split('?')[0] || 'jpg';
-      const name = `custom_bg_${Date.now()}.${ext}`;
-      // 保存到public/image（仅开发环境有效，生产需后端支持）
-      // 这里用a标签模拟下载，实际保存到服务器需后端API
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = name;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      // 返回文件名用于加入images.json
-      return name;
-    } catch {
-      setOpMsg('图片下载失败');
-      return null;
-    }
-  }
-  async function saveBgImage() {
-    let fileName = '';
-    if (bgImageUrl && /^https?:\/\//.test(bgImageUrl)) {
-      fileName = await downloadAndSaveImage(bgImageUrl) || '';
-    }
+  function saveBgImage() {
     localStorage.setItem('customBgImageUrl', bgImageUrl);
     localStorage.setItem('carouselInterval', String(carouselInterval));
-    // 加入images.json（仅提示，实际需后端支持）
-    if (fileName) setOpMsg('图片已下载，请手动将其添加到public/image并更新images.json');
-    else alert('背景图片已保存');
+    alert('背景图片已保存');
   }
   // 恢复默认背景图片逻辑
   function resetBgImage() {
@@ -688,7 +658,7 @@ const App: React.FC = () => {
                 <th>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <select
-                      style={{ height: 28, fontSize: 14 }}
+                      style={{ height: 28, fontSize: 14, marginRight: 18 }}
                       onChange={e => {
                         if (e.target.value === 'expired') handleBatchSetStatus('expired');
                         else if (e.target.value === 'active') handleBatchSetStatus('active');
@@ -742,7 +712,7 @@ const App: React.FC = () => {
                       <span className="progress-text">{progress}%</span>
                     </td>}
                     <td>
-                      <div className="action-buttons" style={{ display: 'flex', flexDirection: 'row', gap: 8 }}>
+                      <div className="action-buttons" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                         <button className="btn-edit" onClick={() => handleEdit(index + (page - 1) * pageSize)}>修改</button>
                         <button className="btn-delete" onClick={() => handleDelete(index + (page - 1) * pageSize)}>删除</button>
                         <button className="btn-renew" onClick={() => {
