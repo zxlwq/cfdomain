@@ -663,11 +663,10 @@ const App: React.FC = () => {
                 <th onClick={() => { setSortField('status'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }} className={`sortable ${getSortClass('status')}`} style={{ minWidth: 100 }}>状态</th>
                 <th onClick={() => { setSortField('registerDate'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }} className={`sortable ${getSortClass('registerDate')}`} style={{ minWidth: 110 }}>注册日期</th>
                 <th onClick={() => { setSortField('expireDate'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }} className={`sortable ${getSortClass('expireDate')}`} style={{ minWidth: 110 }}>过期日期</th>
-                <th onClick={() => { setSortField('daysLeft'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }} className={`sortable ${getSortClass('daysLeft')}`} style={{ minWidth: 120 }}>到期天数
-                  <span style={{ fontSize: 12, marginLeft: 2 }}>{sortField === 'daysLeft' ? (sortOrder === 'asc' ? '▲' : '▼') : '△'}</span>
-                </th>
-                {showProgress && <th style={{ width: 120 }}>使用进度</th>}
+                <th onClick={() => { setSortField('daysLeft'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }} className={`sortable ${getSortClass('daysLeft')}`} style={{ minWidth: 120 }}>到期天数{sortField === 'daysLeft' ? (sortOrder === 'asc' ? '▲' : '▼') : ''}</th>
+                {showProgress && <th onClick={() => { setSortField('progress'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }} className={`sortable ${getSortClass('progress')}`} style={{ width: 120 }}>使用进度{sortField === 'progress' ? (sortOrder === 'asc' ? '▲' : '▼') : ''}</th>}
                 <th style={{ width: 140 }}>操作</th>
+                <th style={{ width: 24, paddingLeft: 0, paddingRight: 0 }}><input type="checkbox" onChange={handleSelectAll} checked={selectedIndexes.length === paged.length && paged.length > 0} /></th>
                 <th style={{ minWidth: 80 }}>
                   <select
                     style={{ height: 28, fontSize: 14, marginRight: 0 }}
@@ -685,7 +684,6 @@ const App: React.FC = () => {
                     <option value="delete">批量删除</option>
                   </select>
                 </th>
-                <th style={{ width: 24, paddingLeft: 0, paddingRight: 0 }}><input type="checkbox" onChange={handleSelectAll} checked={selectedIndexes.length === paged.length && paged.length > 0} /></th>
               </tr>
             </thead>
             <tbody>
@@ -703,7 +701,7 @@ const App: React.FC = () => {
                 if (daysColor === '#28a745') daysColor = '#fff';
                 return (
                   <tr key={domain.domain} className={editIndex === index ? 'editing-row' : ''} ref={editIndex === index ? editRowRef : undefined}>
-                    <td className="domain-name">{domain.domain}</td>
+                    <td className="domain-name" style={{ color: '#fff', fontWeight: 700 }}>{domain.domain}</td>
                     {showRegistrar && <td className="registrar">{domain.registrar}</td>}
                     <td><span className={`status ${domain.status}`}>{STATUS_LABELS[domain.status]}</span></td>
                     <td className="date">{domain.registerDate}</td>
@@ -728,9 +726,6 @@ const App: React.FC = () => {
                         }}>续期</button>
                       </div>
                     </td>
-                    <td><select
-                      style={{ display: 'none' }}
-                    /></td>
                     <td style={{ width: 24, paddingLeft: 0, paddingRight: 0 }}><input type="checkbox" checked={checked} onChange={e => handleSelectRow(index + (page - 1) * pageSize, e.target.checked)} /></td>
                   </tr>
                 );
