@@ -654,41 +654,45 @@ const App: React.FC = () => {
           <table style={isMobile ? { minWidth: 700 } : {}}>
             <thead>
               <tr>
-                <th style={{ width: 36 }}><input type="checkbox" onChange={handleSelectAll} checked={selectedIndexes.length === paged.length && paged.length > 0} /></th>
                 <th>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <select
-                      style={{ height: 28, fontSize: 14, marginRight: 32 }}
-                      onChange={e => {
-                        if (e.target.value === 'expired') handleBatchSetStatus('expired');
-                        else if (e.target.value === 'active') handleBatchSetStatus('active');
-                        else if (e.target.value === 'delete') handleBatchDelete();
-                        e.target.value = '';
-                      }}
-                      defaultValue=""
-                    >
-                      <option value="" disabled>批量操作</option>
-                      <option value="expired">批量为已过期</option>
-                      <option value="active">批量为正常</option>
-                      <option value="delete">批量删除</option>
-                    </select>
                     <span onClick={() => { setSortField('domain'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }} className={`sortable ${getSortClass('domain')}`}>域名</span>
                   </div>
                 </th>
-                <th onClick={() => { setSortField('status'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }} className={`sortable ${getSortClass('status')}`}>状态</th>
                 <th onClick={() => { setSortField('registrar'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }} className={`sortable ${getSortClass('registrar')}`}>注册商</th>
+                <th onClick={() => { setSortField('status'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }} className={`sortable ${getSortClass('status')}`}>状态</th>
                 <th onClick={() => { setSortField('registerDate'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }} className={`sortable ${getSortClass('registerDate')}`}>注册日期</th>
                 <th onClick={() => { setSortField('expireDate'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }} className={`sortable ${getSortClass('expireDate')}`}>过期日期</th>
-                <th>到期天数</th>
+                <th onClick={() => { setSortField('daysLeft'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }} className={`sortable ${getSortClass('daysLeft')}`}>到期天数
+                  <span style={{ fontSize: 12, marginLeft: 2 }}>{sortField === 'daysLeft' ? (sortOrder === 'asc' ? '▲' : '▼') : '△'}</span>
+                </th>
                 {showProgress && <th style={{ width: 120 }}>使用进度</th>}
+                <th style={{ width: 36 }}><input type="checkbox" onChange={handleSelectAll} checked={selectedIndexes.length === paged.length && paged.length > 0} /></th>
+                <th style={{ minWidth: 120 }}>
+                  <select
+                    style={{ height: 28, fontSize: 14, marginRight: 0 }}
+                    onChange={e => {
+                      if (e.target.value === 'expired') handleBatchSetStatus('expired');
+                      else if (e.target.value === 'active') handleBatchSetStatus('active');
+                      else if (e.target.value === 'delete') handleBatchDelete();
+                      e.target.value = '';
+                    }}
+                    defaultValue=""
+                  >
+                    <option value="" disabled>批量操作</option>
+                    <option value="expired">批量为已过期</option>
+                    <option value="active">批量为正常</option>
+                    <option value="delete">批量删除</option>
+                  </select>
+                </th>
                 <th style={{ width: 140 }}>操作</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={showRegistrar && showProgress ? 9 : 7} className="loading">加载中...</td></tr>
+                <tr><td colSpan={showRegistrar && showProgress ? 10 : 8} className="loading">加载中...</td></tr>
               ) : paged.length === 0 ? (
-                <tr><td colSpan={showRegistrar && showProgress ? 9 : 7} className="loading">暂无域名数据</td></tr>
+                <tr><td colSpan={showRegistrar && showProgress ? 10 : 8} className="loading">暂无域名数据</td></tr>
               ) : paged.map((domain, index) => {
                 const progress = calculateProgress(domain.registerDate, domain.expireDate);
                 const progressClass = getProgressClass(progress);
@@ -696,9 +700,9 @@ const App: React.FC = () => {
                 const expireDate = new Date(domain.expireDate);
                 const daysLeft = Math.ceil((expireDate.getTime() - Date.now()) / (24 * 60 * 60 * 1000));
                 let daysColor = daysLeft <= 7 ? '#dc3545' : daysLeft <= 30 ? '#fd7e14' : '#28a745';
+                if (daysColor === '#28a745') daysColor = '#fff';
                 return (
                   <tr key={domain.domain} className={editIndex === index ? 'editing-row' : ''} ref={editIndex === index ? editRowRef : undefined}>
-                    <td><input type="checkbox" checked={checked} onChange={e => handleSelectRow(index + (page - 1) * pageSize, e.target.checked)} /></td>
                     <td className="domain-name">{domain.domain}</td>
                     {showRegistrar && <td className="registrar">{domain.registrar}</td>}
                     <td><span className={`status ${domain.status}`}>{STATUS_LABELS[domain.status]}</span></td>
@@ -711,11 +715,12 @@ const App: React.FC = () => {
                       </div>
                       <span className="progress-text">{progress}%</span>
                     </td>}
+                    <td><input type="checkbox" checked={checked} onChange={e => handleSelectRow(index + (page - 1) * pageSize, e.target.checked)} /></td>
                     <td>
                       <div className="action-buttons" style={{ display: 'flex', flexDirection: 'row', gap: 8 }}>
-                        <button className="btn-edit" style={{ width: 40, height: 40, padding: 0, textAlign: 'center' }} onClick={() => handleEdit(index + (page - 1) * pageSize)}>修改</button>
-                        <button className="btn-delete" style={{ width: 40, height: 40, padding: 0, textAlign: 'center' }} onClick={() => handleDelete(index + (page - 1) * pageSize)}>删除</button>
-                        <button className="btn-renew" style={{ width: 40, height: 40, padding: 0, textAlign: 'center' }} onClick={() => {
+                        <button className="btn-edit" style={{ width: 56, height: 40, padding: 0, textAlign: 'center' }} onClick={() => handleEdit(index + (page - 1) * pageSize)}>修改</button>
+                        <button className="btn-delete" style={{ width: 56, height: 40, padding: 0, textAlign: 'center' }} onClick={() => handleDelete(index + (page - 1) * pageSize)}>删除</button>
+                        <button className="btn-renew" style={{ width: 56, height: 40, padding: 0, textAlign: 'center' }} onClick={() => {
                           if (domain.renewUrl && domain.renewUrl.trim() !== '') {
                             window.open(domain.renewUrl, '_blank');
                           } else {
