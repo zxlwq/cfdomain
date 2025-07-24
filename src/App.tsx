@@ -854,11 +854,11 @@ const App: React.FC = () => {
             gap: 10,
             flexWrap: 'wrap',
             alignItems: 'center',
-            justifyContent: 'center',
+            justifyContent: 'flex-start', // 从居中改为左对齐
             position: 'relative',
             width: '100%',
             maxWidth: 900,
-            left: '50%',
+            left: '38%', // 向左偏移，约对齐注册日期/过期日期中间
             transform: 'translateX(-50%)',
           }}
         >
