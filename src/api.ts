@@ -58,4 +58,18 @@ export async function notifyExpiring(domains: Domain[]): Promise<void> {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ domains })
   });
+}
+
+export async function fetchNotificationSettingsFromServer() {
+  const res = await fetch('/api/notify');
+  return res.json();
+}
+
+export async function saveNotificationSettingsToServer(settings: any) {
+  const res = await fetch('/api/notify', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ settings })
+  });
+  return res.json();
 } 
