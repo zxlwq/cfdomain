@@ -11,10 +11,14 @@ Fork该项目到你的 GitHub 仓库
 1. 进入 [Cloudflare Pages](https://dash.cloudflare.com/?to=/:account/pages)，点击"创建项目"
 2. 连接你的 GitHub 仓库
 3. 构建设置：
-   - 构建命令：`npm run build`
-   - 构建输出目录：`dist`
-   - Node.js 版本：20
-
+   - 构建命令：
+     ```
+     npm run build
+     ```
+   - 构建输出目录：
+     ```
+     dist
+     ```
 ### 3. 配置 D1 数据库
 1. 在 Cloudflare 控制台创建 D1 数据库，命名为 `domain_panel`
 2. 在 Pages 项目设置中绑定 D1 数据库，绑定名为 `DB`
@@ -37,7 +41,7 @@ CREATE TABLE IF NOT EXISTS notification_settings (
   warning_days TEXT,
   notification_enabled TEXT,
   notification_interval TEXT,
-  notification_method TEXT -- 存储为JSON字符串，如 '["wechat","qq","email"]'
+  notification_method TEXT
 );
 ```
 
