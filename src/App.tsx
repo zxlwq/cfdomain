@@ -726,7 +726,7 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className="container" style={{ maxWidth: 1600, margin: '0 auto', padding: 20, position: 'relative', zIndex: 1 }}>
+    <div className="container" style={{ maxWidth: 1300, margin: '0 auto', padding: 20, position: 'relative', zIndex: 1 }}>
       {GlobalOpMsg}
       <div className="header">
         <h1>域名面板</h1>
@@ -752,7 +752,7 @@ const App: React.FC = () => {
           <p style={statNumberStyle}>{avgProgress}%</p>
         </div>
       </div>
-      <div className="domain-table" style={{ ...(isMobile ? { fontSize: 12 } : {}), width: '100%', minWidth: 0, margin: '0 auto', overflowX: 'visible', maxWidth: 1600 }}>
+      <div className="domain-table" style={{ ...(isMobile ? { fontSize: 12 } : {}), width: '100%', minWidth: 0, margin: '0 auto', overflowX: 'visible', maxWidth: 1300 }}>
         <div className="table-header">
           <h2>域名列表</h2>
           <div className="search-box">
