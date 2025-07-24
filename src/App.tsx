@@ -854,13 +854,10 @@ const App: React.FC = () => {
             gap: 10,
             flexWrap: 'wrap',
             alignItems: 'center',
-            position: 'absolute',
-            left: '48%', // 约等于注册日期/过期日期中间
-            top: '100%',
-            transform: 'translateX(-50%)',
-            width: 'max-content',
+            justifyContent: 'center',
+            width: '100%',
             maxWidth: 900,
-            zIndex: 10
+            paddingLeft: 180, // 微调让“第 x / y 页”视觉中心对齐注册日期/过期日期中间
           }}
         >
           <span>每页</span>
