@@ -726,7 +726,7 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className="container">
+    <div className="container" style={{ maxWidth: 1600, margin: '0 auto', padding: 20, position: 'relative', zIndex: 1 }}>
       {GlobalOpMsg}
       <div className="header">
         <h1>域名面板</h1>
@@ -752,7 +752,7 @@ const App: React.FC = () => {
           <p style={statNumberStyle}>{avgProgress}%</p>
         </div>
       </div>
-      <div className="domain-table" style={{ maxWidth: 1600, margin: '0 auto', width: '100%', minWidth: 0, overflowX: 'visible' }}>
+      <div className="domain-table" style={{ ...(isMobile ? { fontSize: 12 } : {}), width: '100%', minWidth: 0, margin: '0 auto', overflowX: 'visible', maxWidth: 1600 }}>
         <div className="table-header">
           <h2>域名列表</h2>
           <div className="search-box">
@@ -847,32 +847,29 @@ const App: React.FC = () => {
             </tbody>
           </table>
         </div>
-        <div style={{
-          margin: '10px 0',
-          display: 'flex',
-          gap: 10,
-          flexWrap: 'wrap',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          maxWidth: 1200,
-          marginLeft: 'auto',
-          marginRight: 'auto',
-          position: 'relative'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span>每页</span>
-            <select value={pageSize} onChange={e => { setPageSize(Number(e.target.value)); setPage(1); }}>
-              {[10, 20, 50, 100].map(size => <option key={size} value={size}>{size}</option>)}
-            </select>
-            <span>条</span>
-            <button className="btn" style={{ ...sakuraBtnStyle }} disabled={page === 1} onClick={() => setPage(p => Math.max(1, p - 1))}>上一页</button>
-          </div>
-          <div style={{ flex: 1, textAlign: 'center', fontWeight: 600, fontSize: 18 }}>
-            第 {page} / {totalPages} 页
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'flex-end' }}>
-            <button className="btn" style={{ ...sakuraBtnStyle }} disabled={page === totalPages} onClick={() => setPage(p => Math.min(totalPages, p + 1))}>下一页</button>
-          </div>
+        <div
+          style={{
+            margin: '10px 0',
+            display: 'flex',
+            gap: 10,
+            flexWrap: 'wrap',
+            alignItems: 'center',
+            justifyContent: 'center',
+            position: 'relative',
+            width: '100%',
+            maxWidth: 900,
+            left: '50%',
+            transform: 'translateX(-50%)',
+          }}
+        >
+          <span>每页</span>
+          <select value={pageSize} onChange={e => { setPageSize(Number(e.target.value)); setPage(1); }}>
+            {[10, 20, 50, 100].map(size => <option key={size} value={size}>{size}</option>)}
+          </select>
+          <span>条</span>
+          <button className="btn" style={{ ...sakuraBtnStyle }} disabled={page === 1} onClick={() => setPage(p => Math.max(1, p - 1))}>上一页</button>
+          <span style={{ fontWeight: 700, fontSize: 18, minWidth: 120, textAlign: 'center', display: 'inline-block' }}>第 {page} / {totalPages} 页</span>
+          <button className="btn" style={{ ...sakuraBtnStyle }} disabled={page === totalPages} onClick={() => setPage(p => Math.min(totalPages, p + 1))}>下一页</button>
         </div>
         {/* 原有opMsg提示已移到全局 */}
       </div>
