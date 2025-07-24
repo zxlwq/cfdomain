@@ -111,10 +111,31 @@ const App: React.FC = () => {
   const [opMsg, setOpMsg] = useState('');
   useEffect(() => {
     if (opMsg) {
-      const t = setTimeout(() => setOpMsg(''), 2000);
+      const t = setTimeout(() => setOpMsg(''), 3000);
       return () => clearTimeout(t);
     }
   }, [opMsg]);
+
+  // 全局提示组件，放在最外层，zIndex极高，字体大
+  const GlobalOpMsg = opMsg ? (
+    <div style={{
+      position: 'fixed',
+      top: 0,
+      left: '50%',
+      transform: 'translateX(-50%)',
+      background: 'rgba(40,40,40,0.98)',
+      color: '#fff',
+      fontSize: 28,
+      fontWeight: 700,
+      padding: '18px 48px',
+      borderRadius: 16,
+      zIndex: 99999,
+      boxShadow: '0 4px 24px rgba(0,0,0,0.25)',
+      pointerEvents: 'none',
+      textAlign: 'center',
+      letterSpacing: 1.5
+    }}>{opMsg}</div>
+  ) : null;
 
   useEffect(() => {
     loadDomains();
@@ -343,11 +364,39 @@ const App: React.FC = () => {
     setOpMsg('批量状态修改成功');
   }
 
-  function saveNotificationSettings() {
-    localStorage.setItem('notificationWarningDays', warningDays);
-    localStorage.setItem('notificationEnabled', notificationEnabled);
-    localStorage.setItem('notificationInterval', notificationInterval);
-    alert('通知设置已保存');
+  // 多选通知方式
+  const [notificationMethods, setNotificationMethods] = useState<string[]>([]);
+
+  // 加载通知设置（页面初始化时）
+  useEffect(() => {
+    fetchNotificationSettingsFromServer().then(data => {
+      if (data.success && data.settings) {
+        setWarningDays(data.settings.warningDays);
+        setNotificationEnabled(data.settings.notificationEnabled);
+        setNotificationInterval(data.settings.notificationInterval);
+        // 支持字符串或数组
+        let methods = data.settings.notificationMethod;
+        if (Array.isArray(methods)) setNotificationMethods(methods);
+        else if (typeof methods === 'string') {
+          try { setNotificationMethods(JSON.parse(methods)); } catch { setNotificationMethods([]); }
+        } else setNotificationMethods([]);
+      }
+    });
+  }, []);
+
+  // 保存通知设置（按钮点击时）
+  async function saveNotificationSettings() {
+    const res = await saveNotificationSettingsToServer({
+      warningDays,
+      notificationEnabled,
+      notificationInterval,
+      notificationMethod: JSON.stringify(notificationMethods)
+    });
+    if (res.success) {
+      alert('通知设置已保存');
+    } else {
+      alert('保存失败：' + (res.error || '未知错误'));
+    }
   }
   function saveBgImage() {
     localStorage.setItem('customBgImageUrl', bgImageUrl);
@@ -671,6 +720,7 @@ const App: React.FC = () => {
 
   return (
     <div className="container">
+      {GlobalOpMsg}
       <div className="header">
         <h1>域名面板</h1>
         <p>查看域名状态、注册商、注册日期、过期日期和使用进度</p>
@@ -800,7 +850,7 @@ const App: React.FC = () => {
           <span>第 {page} / {totalPages} 页</span>
           <button className="btn" style={{ ...sakuraBtnStyle }} disabled={page === totalPages} onClick={() => setPage(p => Math.min(totalPages, p + 1))}>下一页</button>
         </div>
-        {opMsg && <div style={{ position: 'fixed', top: 20, left: '50%', transform: 'translateX(-50%)', background: '#333', color: '#fff', padding: '8px 24px', borderRadius: 8, zIndex: 9999 }}>{opMsg}</div>}
+        {/* 原有opMsg提示已移到全局 */}
       </div>
       <button className="add-domain-btn" onClick={handleAdd}>+</button>
       {modalOpen && (
@@ -839,7 +889,7 @@ const App: React.FC = () => {
                 <input id="renewUrl" value={form.renewUrl || ''} onChange={handleFormChange} placeholder="https://..." />
               </div>
               <div className="modal-buttons">
-                <button type="button" className="btn btn-secondary" onClick={() => setModalOpen(false)}>取消</button>
+                <button type="button" className="btn btn-secondary" style={{ ...sakuraBtnStyle }} onClick={() => setModalOpen(false)}>取消</button>
                 <button type="submit" className="btn btn-primary">保存</button>
               </div>
             </form>
@@ -901,6 +951,28 @@ const App: React.FC = () => {
                 </select>
                 <small style={{ color: '#666', fontSize: '0.9rem' }}>设置通知发送的频率</small>
               </div>
+              <div className="form-group">
+                <label>通知方式</label>
+                <div>
+                  {['wechat', 'qq', 'email', 'telegram'].map(method => (
+                    <label key={method} style={{ marginRight: 12 }}>
+                      <input
+                        type="checkbox"
+                        checked={notificationMethods.includes(method)}
+                        onChange={e => {
+                          setNotificationMethods(prev =>
+                            e.target.checked
+                              ? [...prev, method]
+                              : prev.filter(m => m !== method)
+                          );
+                        }}
+                      />
+                      {method === 'wechat' ? '微信' : method === 'qq' ? 'QQ' : method === 'email' ? '邮件' : 'Telegram'}
+                    </label>
+                  ))}
+                </div>
+                <small style={{ color: '#666', fontSize: '0.9rem' }}>可多选，通知会同时发送到所有勾选方式</small>
+              </div>
               <div className="modal-buttons">
                 <button className="btn btn-primary" onClick={saveNotificationSettings}>保存设置</button>
               </div>
@@ -914,7 +986,7 @@ const App: React.FC = () => {
               <div className="form-group">
                 <label>轮播时长（秒）</label>
                 <input type="number" min={5} max={600} value={carouselInterval} onChange={e => setCarouselInterval(Number(e.target.value))} />
-                <small style={{ color: '#666', fontSize: '0.9rem' }}>图片轮播间隔建议5-600秒</small>
+                <small style={{ color: '#666', fontSize: '0.9rem' }}>设置public/image文件夹内图片轮播间隔，建议5-600秒</small>
               </div>
               <div className="modal-buttons">
                 <button className="btn btn-primary" onClick={saveBgImage}>保存背景</button>
@@ -925,7 +997,7 @@ const App: React.FC = () => {
             <div className="settings-section">
               <h4>📤 域名数据导入/导出</h4>
               <div className="form-group" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 12 }}>
-                <label htmlFor="exportFormat" style={{ marginRight: 8 }}>选择格式：</label>
+                <label htmlFor="exportFormat" style={{ marginRight: 8 }}>导出格式：</label>
                 <select id="exportFormat" value={exportFormat} onChange={e => setExportFormat(e.target.value as 'csv' | 'json' | 'txt')} style={{ minWidth: 90, marginRight: 8 }}>
                   <option value="csv">CSV</option>
                   <option value="json">JSON</option>
@@ -937,7 +1009,7 @@ const App: React.FC = () => {
                 <button className="btn btn-primary" style={{ marginLeft: 8 }} onClick={uploadToWebDAV}>WebDAV上传</button>
                 <button className="btn btn-secondary" style={{ ...sakuraBtnStyle }} onClick={downloadFromWebDAV}>WebDAV下载</button>
               </div>
-              <small style={{ color: '#666', fontSize: '0.9rem' }}>支持csv、json、txt格式，导入会覆盖当前所有域名数据，WebDAV参数请在Cloudflare Pages环境变量</small>
+              <small style={{ color: '#666', fontSize: '0.9rem' }}>支持csv、json、txt格式，导入会覆盖当前所有域名数据。WebDAV参数请在Cloudflare Pages环境变量中配置：VITE_WEBDAV_URL、VITE_WEBDAV_USERNAME、VITE_WEBDAV_PASSWORD。</small>
             </div>
             <div className="modal-buttons">
               <button className="btn btn-secondary" style={{ ...sakuraBtnStyle }} onClick={() => setSettingsOpen(false)}>关闭</button>
