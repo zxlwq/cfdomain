@@ -914,7 +914,7 @@ const App: React.FC = () => {
               <div className="form-group">
                 <label>轮播时长（秒）</label>
                 <input type="number" min={5} max={600} value={carouselInterval} onChange={e => setCarouselInterval(Number(e.target.value))} />
-                <small style={{ color: '#666', fontSize: '0.9rem' }}>设置public/image文件夹内图片轮播间隔，建议5-600秒</small>
+                <small style={{ color: '#666', fontSize: '0.9rem' }}>图片轮播间隔建议5-600秒</small>
               </div>
               <div className="modal-buttons">
                 <button className="btn btn-primary" onClick={saveBgImage}>保存背景</button>
@@ -925,7 +925,7 @@ const App: React.FC = () => {
             <div className="settings-section">
               <h4>📤 域名数据导入/导出</h4>
               <div className="form-group" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 12 }}>
-                <label htmlFor="exportFormat" style={{ marginRight: 8 }}>导出格式：</label>
+                <label htmlFor="exportFormat" style={{ marginRight: 8 }}>选择格式：</label>
                 <select id="exportFormat" value={exportFormat} onChange={e => setExportFormat(e.target.value as 'csv' | 'json' | 'txt')} style={{ minWidth: 90, marginRight: 8 }}>
                   <option value="csv">CSV</option>
                   <option value="json">JSON</option>
@@ -937,7 +937,7 @@ const App: React.FC = () => {
                 <button className="btn btn-primary" style={{ marginLeft: 8 }} onClick={uploadToWebDAV}>WebDAV上传</button>
                 <button className="btn btn-secondary" style={{ ...sakuraBtnStyle }} onClick={downloadFromWebDAV}>WebDAV下载</button>
               </div>
-              <small style={{ color: '#666', fontSize: '0.9rem' }}>支持csv、json、txt格式，导入会覆盖当前所有域名数据。WebDAV参数请在Cloudflare Pages环境变量中配置：VITE_WEBDAV_URL、VITE_WEBDAV_USERNAME、VITE_WEBDAV_PASSWORD。</small>
+              <small style={{ color: '#666', fontSize: '0.9rem' }}>支持csv、json、txt格式，导入会覆盖当前所有域名数据，WebDAV参数请在Cloudflare Pages环境变量</small>
             </div>
             <div className="modal-buttons">
               <button className="btn btn-secondary" style={{ ...sakuraBtnStyle }} onClick={() => setSettingsOpen(false)}>关闭</button>
