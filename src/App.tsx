@@ -1,6 +1,13 @@
-import React, { useEffect, useState } from 'react';
-import { fetchDomains, saveDomains, deleteDomain, notifyExpiring, Domain } from './api';
-import { useRef } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
+import {
+  fetchDomains,
+  saveDomains,
+  deleteDomain,
+  notifyExpiring,
+  Domain,
+  fetchNotificationSettingsFromServer,
+  saveNotificationSettingsToServer
+} from './api';
 
 const STATUS_LABELS: Record<string, string> = {
   active: '正常',
@@ -143,7 +150,7 @@ const App: React.FC = () => {
 
   const [carouselImages, setCarouselImages] = useState<string[]>([]);
   const carouselIndex = useRef(0);
-  const carouselTimer = useRef<NodeJS.Timeout | null>(null);
+  const carouselTimer = useRef<number | null>(null);
 
   // 加载轮播图片列表，修复fetch空内容报错
   useEffect(() => {
@@ -393,7 +400,7 @@ const App: React.FC = () => {
       notificationMethod: JSON.stringify(notificationMethods)
     });
     if (res.success) {
-      alert('通知设置已保存');
+    alert('通知设置已保存');
     } else {
       alert('保存失败：' + (res.error || '未知错误'));
     }
