@@ -960,9 +960,40 @@ const App: React.FC = () => {
               </div>
               <div className="form-group">
                 <label>通知方式</label>
-                <div>
+                <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', margin: '8px 0' }}>
                   {['wechat', 'qq', 'email', 'telegram'].map(method => (
-                    <label key={method} style={{ marginRight: 12 }}>
+                    <label
+                      key={method}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        padding: '8px 18px',
+                        borderRadius: 24,
+                        cursor: 'pointer',
+                        fontWeight: 600,
+                        fontSize: 16,
+                        background: notificationMethods.includes(method)
+                          ? (method === 'wechat' ? '#4dc247' : method === 'qq' ? '#0099ff' : method === 'email' ? '#ffb300' : '#5a8dee')
+                          : '#f1f3f4',
+                        color: notificationMethods.includes(method) ? '#fff' : '#333',
+                        boxShadow: notificationMethods.includes(method)
+                          ? '0 2px 12px rgba(90,140,220,0.18)'
+                          : 'none',
+                        border: notificationMethods.includes(method)
+                          ? '2px solid #3330'
+                          : '2px solid #e0e0e0',
+                        transition: 'all 0.2s',
+                        marginRight: 0
+                      }}
+                      onMouseEnter={e => {
+                        (e.currentTarget as HTMLLabelElement).style.boxShadow = '0 4px 18px rgba(90,140,220,0.22)';
+                      }}
+                      onMouseLeave={e => {
+                        (e.currentTarget as HTMLLabelElement).style.boxShadow = notificationMethods.includes(method)
+                          ? '0 2px 12px rgba(90,140,220,0.18)'
+                          : 'none';
+                      }}
+                    >
                       <input
                         type="checkbox"
                         checked={notificationMethods.includes(method)}
@@ -973,6 +1004,7 @@ const App: React.FC = () => {
                               : prev.filter(m => m !== method)
                           );
                         }}
+                        style={{ marginRight: 8, accentColor: notificationMethods.includes(method) ? '#fff' : '#bbb', width: 18, height: 18 }}
                       />
                       {method === 'wechat' ? '微信' : method === 'qq' ? 'QQ' : method === 'email' ? '邮件' : 'Telegram'}
                     </label>
