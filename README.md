@@ -5,7 +5,7 @@
 ## 🚀 快速部署
 
 ### 1. 推送代码到 GitHub
-将项目代码推送到 GitHub 仓库。
+Fork该项目到你的 GitHub 仓库
 
 ### 2. Cloudflare Pages 部署
 1. 进入 [Cloudflare Pages](https://dash.cloudflare.com/?to=/:account/pages)，点击"创建项目"
