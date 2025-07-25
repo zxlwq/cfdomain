@@ -1,6 +1,4 @@
-// 1. 顶部类型导入
-import * as React from 'react';
-import { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   fetchDomains,
   saveDomains,
@@ -121,27 +119,19 @@ const App: React.FC = () => {
   const GlobalOpMsg = opMsg ? (
     <div style={{
       position: 'fixed',
-      top: 0,
       top: '50%',
       left: '50%',
-      transform: 'translateX(-50%)',
-      background: 'rgba(40,40,40,0.98)',
       transform: 'translate(-50%, -50%)',
       background: 'rgba(40,40,40,0.45)',
       color: '#fff',
-      fontSize: 28,
-      fontWeight: 700,
-      padding: '18px 48px',
       fontSize: 18,
       fontWeight: 600,
       padding: '12px 32px',
       borderRadius: 16,
       zIndex: 99999,
-      boxShadow: '0 4px 24px rgba(0,0,0,0.25)',
       boxShadow: '0 4px 24px rgba(0,0,0,0.18)',
       pointerEvents: 'none',
       textAlign: 'center',
-      letterSpacing: 1.5
       letterSpacing: 1.2,
       backdropFilter: 'blur(12px)',
       WebkitBackdropFilter: 'blur(12px)',
@@ -191,7 +181,7 @@ const App: React.FC = () => {
   useEffect(() => {
     if (bgImageUrl && bgImageUrl.trim() !== '') {
       // 用户自定义图片，直接显示
-      document.body.style.backgroundImage = `url('${bgImageUrl}')`;
+    document.body.style.backgroundImage = `url('${bgImageUrl}')`;
       document.body.style.backgroundSize = 'cover';
       document.body.style.backgroundRepeat = 'no-repeat';
       document.body.style.backgroundPosition = 'center center';
@@ -293,9 +283,9 @@ const App: React.FC = () => {
       link.click();
       document.body.removeChild(link);
       setOpMsg('导出成功');
-    } catch {
+      } catch {
       setOpMsg('导出失败');
-    }
+      }
   }
 
   // 6. 状态筛选与搜索
@@ -357,12 +347,12 @@ const App: React.FC = () => {
   async function handleBatchDelete() {
     if (selectedIndexes.length === 0) return alert('请先选择要操作的域名');
     if (window.confirm(`确定要删除选中的 ${selectedIndexes.length} 个域名吗？`)) {
-      const newDomains = domains.filter((_: Domain, idx: number) => !selectedIndexes.includes(idx));
-      await saveDomains(newDomains);
-      setSelectedIndexes([]);
-      loadDomains();
-      setOpMsg('批量删除成功');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+    const newDomains = domains.filter((_: Domain, idx: number) => !selectedIndexes.includes(idx));
+    await saveDomains(newDomains);
+    setSelectedIndexes([]);
+    loadDomains();
+    setOpMsg('批量删除成功');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   }
   async function handleBatchSetStatus(status: string) {
@@ -373,7 +363,6 @@ const App: React.FC = () => {
       if (status === 'active' || status === 'expired' || status === 'pending') return status;
       return 'pending';
     };
-    const newDomains = domains.map((d: Domain, idx: number) => selectedIndexes.includes(idx) ? { ...d, status: validStatus(status) } : d);
     await saveDomains(newDomains);
     setSelectedIndexes([]);
     loadDomains();
@@ -574,16 +563,16 @@ const App: React.FC = () => {
     const reader = new FileReader();
     reader.onload = async function(evt) {
       try {
-        const text = evt.target?.result as string;
-        const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
-        if (lines.length < 2) throw new Error('CSV文件内容无效');
-        // 处理引号和逗号分隔
-        function parseCSVLine(line: string) {
-          // 简单处理：去除每个字段前后的引号和空格
-          // 支持逗号分隔和引号包裹
-          const result: string[] = [];
-          let current = '';
-          let inQuotes = false;
+          const text = evt.target?.result as string;
+          const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
+          if (lines.length < 2) throw new Error('CSV文件内容无效');
+          // 处理引号和逗号分隔
+          function parseCSVLine(line: string) {
+            // 简单处理：去除每个字段前后的引号和空格
+            // 支持逗号分隔和引号包裹
+            const result: string[] = [];
+            let current = '';
+            let inQuotes = false;
           for (let i = 0; i < line.length; i++) {
             const char = line[i];
             if (char === '"' && !inQuotes) {
@@ -598,57 +587,57 @@ const App: React.FC = () => {
             }
           }
           result.push(current);
-          return result.map(cell => cell.replace(/^"|"$/g, '').trim());
-        }
-        const headerRaw = parseCSVLine(lines[0]);
-        // 字段名归一化函数
-        function norm(s: string) {
-          return s.replace(/^"|"$/g, '').replace(/[_\s-]/g, '').toLowerCase();
-        }
-        // 字段映射表，支持多种写法
-        const fieldMap: Record<string, string> = {
-          'id': 'id',
-          '域名': 'domain', 'domain': 'domain',
+            return result.map(cell => cell.replace(/^"|"$/g, '').trim());
+          }
+          const headerRaw = parseCSVLine(lines[0]);
+          // 字段名归一化函数
+          function norm(s: string) {
+            return s.replace(/^"|"$/g, '').replace(/[_\s-]/g, '').toLowerCase();
+          }
+          // 字段映射表，支持多种写法
+          const fieldMap: Record<string, string> = {
+            'id': 'id',
+            '域名': 'domain', 'domain': 'domain',
           '注册商': 'registrar', 'registrar': 'registrar',
           '注册日期': 'registerDate', 'register_date': 'registerDate',
           '过期日期': 'expireDate', 'expire_date': 'expireDate',
-          '状态': 'status', 'status': 'status',
-          '续期链接': 'renewUrl', 'renewurl': 'renewUrl', 'renew_url': 'renewUrl'
-        };
-        // 归一化后的header
-        const headerNorm = headerRaw.map(norm);
-        // 找到每个字段在header中的索引
-        const colIdx: Partial<Record<'id'|'domain'|'registrar'|'registerDate'|'expireDate'|'status'|'renewUrl', number>> = {};
-        headerNorm.forEach((h, idx) => {
-          const mapped = fieldMap[h];
-          if (mapped && colIdx[mapped as keyof typeof colIdx] === undefined) colIdx[mapped as keyof typeof colIdx] = idx;
-        });
-        if (colIdx.domain === undefined || colIdx.registrar === undefined || colIdx.registerDate === undefined || colIdx.expireDate === undefined || colIdx.status === undefined) {
-          throw new Error('CSV表头需包含:id(可选)、域名/domain、注册商/registrar、注册日期/register_date、过期日期/expire_date、状态/status');
-        }
-        const newDomains = lines.slice(1).map(line => {
-          const cols = parseCSVLine(line);
-          return {
-            id: parseInt(cols[colIdx.id || 0], 10), // 尝试解析id
-            domain: cols[colIdx.domain],
-            registrar: cols[colIdx.registrar],
-            registerDate: cols[colIdx.registerDate],
-            expireDate: cols[colIdx.expireDate],
-            status: cols[colIdx.status] as 'active' | 'expired' | 'pending',
-            renewUrl: cols[colIdx.renewUrl] || undefined
+            '状态': 'status', 'status': 'status',
+            '续期链接': 'renewUrl', 'renewurl': 'renewUrl', 'renew_url': 'renewUrl'
           };
-        });
-        await saveDomains(newDomains);
-        setSelectedIndexes([]);
-        loadDomains();
-        setOpMsg('导入成功！');
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      } catch (err: any) {
-        setOpMsg(err.message || '导入失败');
-        console.error('导入本地CSV/TXT失败:', err); // 新增详细日志
-      }
-    };
-    reader.readAsText(file, 'utf-8');
+          // 归一化后的header
+          const headerNorm = headerRaw.map(norm);
+          // 找到每个字段在header中的索引
+          const colIdx: Partial<Record<'id'|'domain'|'registrar'|'registerDate'|'expireDate'|'status'|'renewUrl', number>> = {};
+          headerNorm.forEach((h, idx) => {
+            const mapped = fieldMap[h];
+            if (mapped && colIdx[mapped as keyof typeof colIdx] === undefined) colIdx[mapped as keyof typeof colIdx] = idx;
+          });
+          if (colIdx.domain === undefined || colIdx.registrar === undefined || colIdx.registerDate === undefined || colIdx.expireDate === undefined || colIdx.status === undefined) {
+            throw new Error('CSV表头需包含:id(可选)、域名/domain、注册商/registrar、注册日期/register_date、过期日期/expire_date、状态/status');
+          }
+          const newDomains = lines.slice(1).map(line => {
+            const cols = parseCSVLine(line);
+          return {
+            id: colIdx.id !== undefined ? parseInt(cols[colIdx.id], 10) : undefined, // 尝试解析id
+            domain: cols[colIdx.domain!],
+            registrar: cols[colIdx.registrar!],
+            registerDate: cols[colIdx.registerDate!],
+            expireDate: cols[colIdx.expireDate!],
+            status: cols[colIdx.status!] as 'active' | 'expired' | 'pending',
+            renewUrl: colIdx.renewUrl !== undefined ? cols[colIdx.renewUrl] : undefined
+          };
+          });
+          await saveDomains(newDomains);
+          setSelectedIndexes([]);
+          loadDomains();
+          setOpMsg('导入成功！');
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        } catch (err: any) {
+          setOpMsg(err.message || '导入失败');
+          console.error('导入本地CSV/TXT失败:', err); // 新增详细日志
+        }
+      };
+      reader.readAsText(file, 'utf-8');
   }
 
   function handleImport(format: 'csv' | 'json') {
@@ -691,10 +680,10 @@ const App: React.FC = () => {
         }
       } catch (err: any) {
         setOpMsg(err.message || '导入失败');
-        console.error('导入本地JSON失败:', err); // 新增详细日志
-      }
-    };
-    reader.readAsText(file, 'utf-8');
+          console.error('导入本地JSON失败:', err); // 新增详细日志
+        }
+      };
+      reader.readAsText(file, 'utf-8');
   }
 
   // 统计卡片样式
