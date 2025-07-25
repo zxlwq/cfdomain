@@ -3,8 +3,8 @@ export interface Domain {
   domain: string;
   status: string;
   registrar: string;
-  registerDate: string;
-  expireDate: string;
+  register_date: string;
+  expire_date: string;
 }
 
 export async function fetchDomains(): Promise<Domain[]> {
