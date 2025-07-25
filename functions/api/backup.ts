@@ -12,6 +12,8 @@ export const onRequest: PagesFunction<{
   const password = env.WEBDAV_PASS;
   const db = env.DB;
   const fileUrl = (webdavFolder.endsWith('/') ? webdavFolder : webdavFolder + '/') + 'domain/domains-backup.json';
+  // 统一编码，防止特殊字符导致认证失败
+  const auth = 'Basic ' + btoa(unescape(encodeURIComponent(username + ':' + password)));
 
   if (request.method === 'POST') {
     // 查询 domains 表所有内容，导出为 JSON 数组
@@ -21,10 +23,11 @@ export const onRequest: PagesFunction<{
         return new Response(JSON.stringify({ success: false, error: '没有可导出的域名数据' }), { status: 404 });
       }
       // 上传到 WebDAV
+      console.log('WebDAV PUT Authorization:', auth);
       const res = await fetch(fileUrl, {
         method: 'PUT',
         headers: {
-          'Authorization': 'Basic ' + btoa(username + ':' + password),
+          'Authorization': auth,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify(results, null, 2)
@@ -45,9 +48,10 @@ export const onRequest: PagesFunction<{
       const res = await fetch(fileUrl, {
         method: 'GET',
         headers: {
-          'Authorization': 'Basic ' + btoa(username + ':' + password)
+          'Authorization': auth
         }
       });
+      console.log('WebDAV GET Authorization:', auth);
       if (!res.ok) {
         const err = await res.text();
         console.error('WebDAV下载失败:', res.status, err);
