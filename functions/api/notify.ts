@@ -4,6 +4,7 @@ export interface Domain {
   registrar: string;
   register_date: string;
   expire_date: string;
+  renewUrl?: string;
 }
 
 export interface NotificationSettings {
