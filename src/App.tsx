@@ -193,10 +193,14 @@ const App: React.FC = () => {
     setLoading(true);
     try {
       const data = await fetchDomains();
+      console.log('加载域名数据：', data.length, '个域名');
       setDomains(data);
       // 加载域名后检查是否有即将到期的域名
       if (!dontRemindToday) {
+        console.log('开始检查即将到期的域名，dontRemindToday =', dontRemindToday);
         checkExpiringDomains(data);
+      } else {
+        console.log('跳过域名到期检查，dontRemindToday =', dontRemindToday);
       }
     } catch (error) {
       setOpMsg('加载域名失败');
@@ -208,20 +212,39 @@ const App: React.FC = () => {
   function checkExpiringDomains(domains: Domain[]) {
     // 如果用户今天已经选择不再提醒，则不显示弹窗
     if (dontRemindToday) {
+      console.log('域名到期提醒：用户今天已选择不再提醒');
       return;
     }
     
     const warningDays = parseInt(localStorage.getItem('notificationWarningDays') || '15', 10);
     const today = new Date();
     const warningDate = new Date(today.getTime() + warningDays * 24 * 60 * 60 * 1000);
+    
+    console.log('域名到期提醒检查：', {
+      warningDays,
+      today: today.toISOString().slice(0, 10),
+      warningDate: warningDate.toISOString().slice(0, 10),
+      totalDomains: domains.length
+    });
+    
     const expiring = domains.filter(domain => {
       const expire_date = new Date(domain.expire_date);
-      return expire_date <= warningDate && expire_date >= today;
+      const isExpiring = expire_date <= warningDate && expire_date >= today;
+      if (isExpiring) {
+        console.log('发现即将到期域名：', domain.domain, '过期日期：', domain.expire_date);
+      }
+      return isExpiring;
     });
+    
+    console.log('即将到期的域名数量：', expiring.length);
+    
     setExpiringDomains(expiring);
     if (expiring.length > 0) {
+      console.log('显示域名到期提醒弹窗');
       setExpireModal(true);
       notifyExpiring(expiring);
+    } else {
+      console.log('没有即将到期的域名');
     }
   }
   function handleAdd() {
