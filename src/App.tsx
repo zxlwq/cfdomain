@@ -15,9 +15,9 @@ const STATUS_LABELS: Record<string, string> = {
   pending: '待激活',
 };
 
-function calculateProgress(registerDate: string, expireDate: string) {
-  const start = new Date(registerDate).getTime();
-  const end = new Date(expireDate).getTime();
+function calculateProgress(register_date: string, expire_date: string) {
+  const start = new Date(register_date).getTime();
+  const end = new Date(expire_date).getTime();
   const now = Date.now();
   if (now < start) return 0;
   if (now > end) return 100;
@@ -34,8 +34,8 @@ const defaultDomain: Domain = {
   domain: '',
   status: 'active',
   registrar: '',
-  registerDate: '',
-  expireDate: '',
+  register_date: '',
+  expire_date: '',
   renewUrl: '',
 };
 
@@ -199,8 +199,8 @@ const App: React.FC = () => {
     const today = new Date();
     const warningDate = new Date(today.getTime() + warningDays * 24 * 60 * 60 * 1000);
     const expiring = domains.filter(domain => {
-      const expireDate = new Date(domain.expireDate);
-      return expireDate <= warningDate && expireDate >= today;
+      const expire_date = new Date(domain.expire_date);
+      return expire_date <= warningDate && expire_date >= today;
     });
     setExpiringDomains(expiring);
     if (expiring.length > 0) {
@@ -275,19 +275,19 @@ const App: React.FC = () => {
         let valA: any = a[sortField as keyof Domain];
         let valB: any = b[sortField as keyof Domain];
         if (sortField === 'daysLeft') {
-          valA = Math.ceil((new Date(a.expireDate).getTime() - Date.now()) / (24 * 60 * 60 * 1000));
-          valB = Math.ceil((new Date(b.expireDate).getTime() - Date.now()) / (24 * 60 * 60 * 1000));
+          valA = Math.ceil((new Date(a.expire_date).getTime() - Date.now()) / (24 * 60 * 60 * 1000));
+          valB = Math.ceil((new Date(b.expire_date).getTime() - Date.now()) / (24 * 60 * 60 * 1000));
         }
         if (sortField === 'progress') {
-          valA = calculateProgress(a.registerDate, a.expireDate);
-          valB = calculateProgress(b.registerDate, b.expireDate);
+          valA = calculateProgress(a.register_date, a.expire_date);
+          valB = calculateProgress(b.register_date, b.expire_date);
         }
         if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
         if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
         return 0;
       });
     } else {
-      list = [...list].sort((a: Domain, b: Domain) => new Date(a.expireDate).getTime() - new Date(b.expireDate).getTime());
+      list = [...list].sort((a: Domain, b: Domain) => new Date(a.expire_date).getTime() - new Date(b.expire_date).getTime());
     }
     return list;
   }
@@ -299,7 +299,7 @@ const App: React.FC = () => {
   const total = domains.length;
   const active = domains.filter((d: Domain) => d.status === 'active').length;
   const expired = domains.filter((d: Domain) => d.status === 'expired').length;
-  const avgProgress = total ? Math.round(domains.reduce((sum: number, d: Domain) => sum + calculateProgress(d.registerDate, d.expireDate), 0) / total) : 0;
+  const avgProgress = total ? Math.round(domains.reduce((sum: number, d: Domain) => sum + calculateProgress(d.register_date, d.expire_date), 0) / total) : 0;
   function handleSelectAll(e: React.ChangeEvent<HTMLInputElement>) {
     if (e.target.checked) {
       setSelectedIndexes(filteredDomains().map((_: Domain, idx: number) => idx));
@@ -386,8 +386,8 @@ const App: React.FC = () => {
       const rows = domains.map((d: Domain) => [
         d.domain,
         d.registrar,
-        d.registerDate,
-        d.expireDate,
+        d.register_date,
+        d.expire_date,
         d.status === 'active' ? '正常' : d.status === 'expired' ? '已过期' : '待激活'
       ]);
       let csvContent = header.join(',') + '\n' + rows.map((r: string[]) => r.join(',')).join('\n');
@@ -415,8 +415,8 @@ const App: React.FC = () => {
         const rows = domains.map((d: Domain) => [
           d.domain,
           d.registrar,
-          d.registerDate,
-          d.expireDate,
+          d.register_date,
+          d.expire_date,
           d.status === 'active' ? '正常' : d.status === 'expired' ? '已过期' : '待激活'
         ]);
         let content = header.join(',') + '\n' + rows.map((r: string[]) => r.join(',')).join('\n');
@@ -501,18 +501,18 @@ const App: React.FC = () => {
             'id': 'id',
             '域名': 'domain', 'domain': 'domain',
             '注册商': 'registrar', 'registrar': 'registrar',
-            '注册日期': 'registerDate', 'registrationdate': 'registerDate', 'registerdate': 'registerDate', 'register_date': 'registerDate',
-            '过期日期': 'expireDate', 'expirationdate': 'expireDate', 'expiredate': 'expireDate', 'expire_date': 'expireDate',
+            '注册日期': 'register_date', 'registrationdate': 'register_date', 'registerdate': 'register_date', 'register_date': 'register_date',
+            '过期日期': 'expire_date', 'expirationdate': 'expire_date', 'expiredate': 'expire_date', 'expire_date': 'expire_date',
             '状态': 'status', 'status': 'status',
             '续期链接': 'renewUrl', 'renewurl': 'renewUrl', 'renew_url': 'renewUrl'
           };
           const headerNorm = headerRaw.map(norm);
-          const colIdx: Partial<Record<'id'|'domain'|'registrar'|'registerDate'|'expireDate'|'status'|'renewUrl', number>> = {};
+          const colIdx: Partial<Record<'id'|'domain'|'registrar'|'register_date'|'expire_date'|'status'|'renewUrl', number>> = {};
           headerNorm.forEach((h, idx) => {
             const mapped = fieldMap[h];
             if (mapped && colIdx[mapped as keyof typeof colIdx] === undefined) colIdx[mapped as keyof typeof colIdx] = idx;
           });
-          if (colIdx.domain === undefined || colIdx.registrar === undefined || colIdx.registerDate === undefined || colIdx.expireDate === undefined || colIdx.status === undefined) {
+          if (colIdx.domain === undefined || colIdx.registrar === undefined || colIdx.register_date === undefined || colIdx.expire_date === undefined || colIdx.status === undefined) {
             throw new Error('CSV表头需包含:id(可选)、域名/domain、注册商/registrar、注册日期/register_date、过期日期/expire_date、状态/status');
           }
           const newDomains = lines.slice(1).map(line => {
@@ -520,8 +520,8 @@ const App: React.FC = () => {
             const obj: any = {
               domain: cols[colIdx.domain!],
               registrar: cols[colIdx.registrar!],
-              registerDate: cols[colIdx.registerDate!],
-              expireDate: cols[colIdx.expireDate!],
+              register_date: cols[colIdx.register_date!],
+              expire_date: cols[colIdx.expire_date!],
               status: (cols[colIdx.status!] === '正常' || cols[colIdx.status!] === 'active' || cols[colIdx.status!].toLowerCase() === 'active') ? 'active' :
                       (cols[colIdx.status!] === '已过期' || cols[colIdx.status!] === 'expired' || cols[colIdx.status!].toLowerCase() === 'expired') ? 'expired' : 'pending'
             };
@@ -634,8 +634,8 @@ const App: React.FC = () => {
                 </th>
                 <th onClick={() => { setSortField('registrar'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }} className={`sortable ${getSortClass('registrar')}`}>注册商</th>
                 <th onClick={() => { setSortField('status'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }} className={`sortable ${getSortClass('status')}`} style={{ minWidth: 100 }}>状态</th>
-                <th onClick={() => { setSortField('registerDate'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }} className={`sortable ${getSortClass('registerDate')}`} style={{ minWidth: 110 }}>注册日期</th>
-                <th onClick={() => { setSortField('expireDate'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }} className={`sortable ${getSortClass('expireDate')}`} style={{ minWidth: 110 }}>过期日期</th>
+                <th onClick={() => { setSortField('register_date'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }} className={`sortable ${getSortClass('register_date')}`} style={{ minWidth: 110 }}>注册日期</th>
+                <th onClick={() => { setSortField('expire_date'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }} className={`sortable ${getSortClass('expire_date')}`} style={{ minWidth: 110 }}>过期日期</th>
                 <th onClick={() => { setSortField('daysLeft'); setSortOrder(sortField === 'daysLeft' && sortOrder === 'asc' ? 'desc' : 'asc'); }} className={`sortable ${getSortClass('daysLeft')}`} style={{ minWidth: 120 }}>到期天数</th>
                 {showProgress && <th onClick={() => { setSortField('progress'); setSortOrder(sortField === 'progress' && sortOrder === 'asc' ? 'desc' : 'asc'); }} className={`sortable ${getSortClass('progress')}`} style={{ width: 120 }}>使用进度</th>}
                 <th style={{ width: 140, position: 'relative' }}>
@@ -667,11 +667,11 @@ const App: React.FC = () => {
               ) : paged.length === 0 ? (
                 <tr><td colSpan={showRegistrar && showProgress ? 11 : 9} className="loading">暂无域名数据</td></tr>
               ) : paged.map((domain, index) => {
-                const progress = calculateProgress(domain.registerDate, domain.expireDate);
+                const progress = calculateProgress(domain.register_date, domain.expire_date);
                 const progressClass = getProgressClass(progress);
                 const checked = selectedIndexes.includes(index + (page - 1) * pageSize);
-                const expireDate = new Date(domain.expireDate);
-                const daysLeft = Math.ceil((expireDate.getTime() - Date.now()) / (24 * 60 * 60 * 1000));
+                const expire_date = new Date(domain.expire_date);
+                const daysLeft = Math.ceil((expire_date.getTime() - Date.now()) / (24 * 60 * 60 * 1000));
                 let daysColor = daysLeft <= 7 ? '#dc3545' : daysLeft <= 30 ? '#fd7e14' : '#28a745';
                 if (daysColor === '#28a745') daysColor = '#fff';
                 return (
@@ -679,8 +679,8 @@ const App: React.FC = () => {
                     <td className="domain-name" style={{ color: '#fff', fontWeight: 700 }}>{domain.domain}</td>
                     {showRegistrar && <td className="registrar">{domain.registrar}</td>}
                     <td><span className={`status ${domain.status}`}>{STATUS_LABELS[domain.status]}</span></td>
-                    <td className="date">{domain.registerDate}</td>
-                    <td className="date">{domain.expireDate}</td>
+                    <td className="date">{domain.register_date}</td>
+                    <td className="date">{domain.expire_date}</td>
                     <td style={{ color: daysColor, fontWeight: 600 }}>{daysLeft}天</td>
                     {showProgress && <td>
                       <div className="progress-bar">
@@ -762,8 +762,8 @@ const App: React.FC = () => {
                 }} />
               </div>
               <div className="form-group">
-                <label htmlFor="registerDate">注册日期</label>
-                <input type="date" id="registerDate" value={form.registerDate} onChange={handleFormChange} required style={{
+                <label htmlFor="register_date">注册日期</label>
+                <input type="date" id="register_date" value={form.register_date} onChange={handleFormChange} required style={{
                   background: 'rgba(40,40,40,0.35)',
                   color: '#fff',
                   border: '1px solid #444',
@@ -779,8 +779,8 @@ const App: React.FC = () => {
                 }} />
               </div>
               <div className="form-group">
-                <label htmlFor="expireDate">过期日期</label>
-                <input type="date" id="expireDate" value={form.expireDate} onChange={handleFormChange} required style={{
+                <label htmlFor="expire_date">过期日期</label>
+                <input type="date" id="expire_date" value={form.expire_date} onChange={handleFormChange} required style={{
                   background: 'rgba(40,40,40,0.35)',
                   color: '#fff',
                   border: '1px solid #444',
@@ -853,8 +853,8 @@ const App: React.FC = () => {
                 <div key={domain.domain} style={{ marginBottom: 10, padding: 10, background: '#f8f9fa', borderRadius: 8 }}>
                   <p><strong>域名:</strong> {domain.domain}</p>
                   <p><strong>注册商:</strong> {domain.registrar}</p>
-                  <p><strong>过期日期:</strong> {domain.expireDate}</p>
-                  <p><strong>剩余天数:</strong> <span style={{ color: '#dc3545', fontWeight: 600 }}>{Math.ceil((new Date(domain.expireDate).getTime() - Date.now()) / (24 * 60 * 60 * 1000))}天</span></p>
+                  <p><strong>过期日期:</strong> {domain.expire_date}</p>
+                  <p><strong>剩余天数:</strong> <span style={{ color: '#dc3545', fontWeight: 600 }}>{Math.ceil((new Date(domain.expire_date).getTime() - Date.now()) / (24 * 60 * 60 * 1000))}天</span></p>
                 </div>
               ))}
             </div>
