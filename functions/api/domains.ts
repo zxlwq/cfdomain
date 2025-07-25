@@ -3,8 +3,8 @@ export interface Domain {
   domain: string;
   status: string;
   registrar: string;
-  registerDate: string;
-  expireDate: string;
+  register_date: string;
+  expire_date: string;
 }
 
 function validateDomain(domain: Domain): { valid: boolean; errors: string[] } {
@@ -18,10 +18,10 @@ function validateDomain(domain: Domain): { valid: boolean; errors: string[] } {
   if (!domain.registrar || domain.registrar.trim() === '') {
     errors.push('注册商不能为空');
   }
-  if (!domain.registerDate || isNaN(Date.parse(domain.registerDate))) {
+  if (!domain.register_date || isNaN(Date.parse(domain.register_date))) {
     errors.push('注册日期格式无效');
   }
-  if (!domain.expireDate || isNaN(Date.parse(domain.expireDate))) {
+  if (!domain.expire_date || isNaN(Date.parse(domain.expire_date))) {
     errors.push('到期日期格式无效');
   }
   return {
@@ -37,7 +37,7 @@ export const onRequest = async (context: any) => {
   if (method === 'GET') {
     try {
       const { results } = await env.DB.prepare(
-        'SELECT id, domain, status, registrar, register_date as registerDate, expire_date as expireDate FROM domains ORDER BY id DESC'
+        'SELECT id, domain, status, registrar, register_date, expire_date FROM domains ORDER BY id DESC'
       ).all();
       return new Response(JSON.stringify({ success: true, domains: results }), {
         headers: { 'content-type': 'application/json' }
@@ -81,7 +81,7 @@ export const onRequest = async (context: any) => {
       for (const d of body.domains) {
         await env.DB.prepare(
           'INSERT INTO domains (domain, status, registrar, register_date, expire_date) VALUES (?, ?, ?, ?, ?)'
-        ).bind(d.domain, d.status, d.registrar, d.registerDate, d.expireDate).run();
+        ).bind(d.domain, d.status, d.registrar, d.register_date, d.expire_date).run();
       }
       return new Response(JSON.stringify({ success: true, message: '数据保存成功' }), {
         headers: { 'content-type': 'application/json' }
