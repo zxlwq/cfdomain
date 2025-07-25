@@ -5,7 +5,6 @@ export interface Domain {
   registrar: string;
   register_date: string;
   expire_date: string;
-  renewUrl?: string;
 }
 
 function validateDomain(domain: Domain): { valid: boolean; errors: string[] } {
@@ -38,7 +37,7 @@ export const onRequest = async (context: any) => {
   if (method === 'GET') {
     try {
       const { results } = await env.DB.prepare(
-        'SELECT id, domain, status, registrar, register_date, expire_date, renewUrl FROM domains ORDER BY id DESC'
+        'SELECT id, domain, status, registrar, register_date, expire_date FROM domains ORDER BY id DESC'
       ).all();
       return new Response(JSON.stringify({ success: true, domains: results }), {
         headers: { 'content-type': 'application/json' }
@@ -81,8 +80,8 @@ export const onRequest = async (context: any) => {
       await env.DB.exec('DELETE FROM domains');
       for (const d of body.domains) {
         await env.DB.prepare(
-          'INSERT INTO domains (domain, status, registrar, register_date, expire_date, renewUrl) VALUES (?, ?, ?, ?, ?, ?)'
-        ).bind(d.domain, d.status, d.registrar, d.register_date, d.expire_date, d.renewUrl || null).run();
+          'INSERT INTO domains (domain, status, registrar, register_date, expire_date) VALUES (?, ?, ?, ?, ?)'
+        ).bind(d.domain, d.status, d.registrar, d.register_date, d.expire_date).run();
       }
       return new Response(JSON.stringify({ success: true, message: '数据保存成功' }), {
         headers: { 'content-type': 'application/json' }
