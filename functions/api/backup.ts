@@ -36,6 +36,7 @@ export const onRequest: PagesFunction<{
       }
       return new Response(JSON.stringify({ success: true, url: fileUrl }), { status: 200 });
     } catch (e: any) {
+      console.error('导出 WebDAV 备份时发生错误:', e);
       return new Response(JSON.stringify({ success: false, error: e?.message || String(e) }), { status: 500 });
     }
   } else if (request.method === 'GET') {
@@ -49,6 +50,7 @@ export const onRequest: PagesFunction<{
       });
       if (!res.ok) {
         const err = await res.text();
+        console.error('WebDAV下载失败:', res.status, err);
         return new Response(JSON.stringify({ success: false, error: err || 'WebDAV下载失败' }), { status: 500 });
       }
       const data = await res.text();
@@ -56,10 +58,12 @@ export const onRequest: PagesFunction<{
       let arr;
       try {
         arr = JSON.parse(data);
-      } catch {
+      } catch (e) {
+        console.error('WebDAV文件内容不是有效JSON:', data, e);
         return new Response(JSON.stringify({ success: false, error: 'WebDAV文件内容不是有效JSON' }), { status: 500 });
       }
       if (!Array.isArray(arr)) {
+        console.error('WebDAV文件内容不是数组:', arr);
         return new Response(JSON.stringify({ success: false, error: 'WebDAV文件内容不是数组' }), { status: 500 });
       }
       return new Response(JSON.stringify(arr), {
@@ -67,6 +71,7 @@ export const onRequest: PagesFunction<{
         headers: { 'Content-Type': 'application/json' }
       });
     } catch (e: any) {
+      console.error('恢复 WebDAV 备份时发生错误:', e);
       return new Response(JSON.stringify({ success: false, error: e?.message || String(e) }), { status: 500 });
     }
   } else {
