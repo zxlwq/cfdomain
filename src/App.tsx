@@ -193,14 +193,10 @@ const App: React.FC = () => {
     setLoading(true);
     try {
       const data = await fetchDomains();
-      console.log('加载域名数据：', data.length, '个域名');
       setDomains(data);
       // 加载域名后检查是否有即将到期的域名
       if (!dontRemindToday) {
-        console.log('开始检查即将到期的域名，dontRemindToday =', dontRemindToday);
         checkExpiringDomains(data);
-      } else {
-        console.log('跳过域名到期检查，dontRemindToday =', dontRemindToday);
       }
     } catch (error) {
       setOpMsg('加载域名失败');
@@ -212,39 +208,20 @@ const App: React.FC = () => {
   function checkExpiringDomains(domains: Domain[]) {
     // 如果用户今天已经选择不再提醒，则不显示弹窗
     if (dontRemindToday) {
-      console.log('域名到期提醒：用户今天已选择不再提醒');
       return;
     }
     
     const warningDays = parseInt(localStorage.getItem('notificationWarningDays') || '15', 10);
     const today = new Date();
     const warningDate = new Date(today.getTime() + warningDays * 24 * 60 * 60 * 1000);
-    
-    console.log('域名到期提醒检查：', {
-      warningDays,
-      today: today.toISOString().slice(0, 10),
-      warningDate: warningDate.toISOString().slice(0, 10),
-      totalDomains: domains.length
-    });
-    
     const expiring = domains.filter(domain => {
       const expire_date = new Date(domain.expire_date);
-      const isExpiring = expire_date <= warningDate && expire_date >= today;
-      if (isExpiring) {
-        console.log('发现即将到期域名：', domain.domain, '过期日期：', domain.expire_date);
-      }
-      return isExpiring;
+      return expire_date <= warningDate && expire_date >= today;
     });
-    
-    console.log('即将到期的域名数量：', expiring.length);
-    
     setExpiringDomains(expiring);
     if (expiring.length > 0) {
-      console.log('显示域名到期提醒弹窗');
       setExpireModal(true);
       notifyExpiring(expiring);
-    } else {
-      console.log('没有即将到期的域名');
     }
   }
   function handleAdd() {
@@ -253,12 +230,14 @@ const App: React.FC = () => {
     setModalOpen(true);
   }
   function handleEdit(index: number) {
+    const filteredList = filteredDomains();
     setEditIndex(index);
-    setForm(domains[index]);
+    setForm(filteredList[index]);
     setModalOpen(true);
   }
   function handleDelete(index: number) {
-    const domainToDelete = domains[index];
+    const filteredList = filteredDomains();
+    const domainToDelete = filteredList[index];
     if (window.confirm(`确定要删除域名 "${domainToDelete.domain}" 吗？`)) {
       deleteDomain(String(domainToDelete.id || 0));
       loadDomains();
@@ -352,7 +331,9 @@ const App: React.FC = () => {
   async function handleBatchDelete() {
     if (selectedIndexes.length === 0) return alert('请先选择要删除的域名');
     if (!window.confirm('确定要批量删除选中的域名吗？')) return;
-    const newDomains = domains.filter((_: Domain, idx: number) => !selectedIndexes.includes(idx));
+    const filteredList = filteredDomains();
+    const domainsToDelete = selectedIndexes.map((idx: number) => filteredList[idx]);
+    const newDomains = domains.filter((domain: Domain) => !domainsToDelete.some((d: Domain) => d.domain === domain.domain));
     await saveDomains(newDomains);
     setSelectedIndexes([]);
     await loadDomains();
@@ -366,7 +347,12 @@ const App: React.FC = () => {
       if (status === 'active' || status === 'expired' || status === 'pending') return status;
       return 'pending';
     };
-    const newDomains = domains.map((d: Domain, idx: number) => selectedIndexes.includes(idx) ? { ...d, status: validStatus(status) } : d);
+    const filteredList = filteredDomains();
+    const domainsToUpdate = selectedIndexes.map((idx: number) => filteredList[idx]);
+    const newDomains = domains.map((d: Domain) => {
+      const domainToUpdate = domainsToUpdate.find((updateDomain: Domain) => updateDomain.domain === d.domain);
+      return domainToUpdate ? { ...d, status: validStatus(status) } : d;
+    });
     await saveDomains(newDomains);
     setSelectedIndexes([]);
     await loadDomains();
