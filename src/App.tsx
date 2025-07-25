@@ -570,6 +570,28 @@ const App: React.FC = () => {
     if (sortField === field) return sortOrder === 'asc' ? 'sorted-asc' : 'sorted-desc';
     return '';
   }
+  // WebDAV下载（通过后端API）
+  async function downloadFromWebDAV() {
+    try {
+      const res = await fetch('/api/backup');
+      let data;
+      try {
+        data = await res.json();
+      } catch {
+        data = null;
+      }
+      if (Array.isArray(data)) {
+        await saveDomains(data);
+        setSelectedIndexes([]);
+        loadDomains();
+        setOpMsg('WebDAV导入成功！');
+      } else {
+        setOpMsg('WebDAV下载失败: ' + (data?.error || '未知错误'));
+      }
+    } catch (e: any) {
+      setOpMsg('WebDAV下载失败: ' + (e.message || e));
+    }
+  }
   return (
     <div className="container" style={{ maxWidth: 1300, margin: '0 auto', padding: 20, position: 'relative', zIndex: 1 }}>
       {GlobalOpMsg}
@@ -1104,24 +1126,7 @@ const App: React.FC = () => {
                 <button
                   className="btn btn-secondary"
                   style={{ backgroundColor: '#ffb6c1', borderColor: '#ffb6c1', color: '#fff' }}
-                  onClick={async () => {
-                    setOpMsg('正在恢复...');
-                    try {
-                      const res = await fetch('/api/backup');
-                      let data;
-                      try { data = await res.json(); } catch { data = null; }
-                      if (Array.isArray(data)) {
-                        await saveDomains(data);
-                        setSelectedIndexes([]);
-                        loadDomains();
-                        setOpMsg('WebDAV导入成功！');
-                      } else {
-                        setOpMsg('WebDAV下载失败: ' + (data?.error || '未知错误'));
-                      }
-                    } catch (e: any) {
-                      setOpMsg('WebDAV下载失败: ' + (e.message || e));
-                    }
-                  }}
+                  onClick={downloadFromWebDAV}
                 >WebDAV恢复</button>
               </div>
               <small style={{ color: '#666', fontSize: '0.9rem' }}>
