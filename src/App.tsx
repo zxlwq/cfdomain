@@ -1,4 +1,6 @@
-import React, { useEffect, useState, useRef } from 'react';
+// 1. 顶部类型导入
+import * as React from 'react';
+import { useEffect, useState, useRef } from 'react';
 import {
   fetchDomains,
   saveDomains,
@@ -30,24 +32,16 @@ function getProgressClass(progress: number) {
   return '';
 }
 
-interface Domain {
-  id?: number;
-  domain: string;
-  status: string;
-  registrar: string;
-  registerDate: string;
-  expireDate: string;
-  renewUrl?: string;
-}
-
-const defaultDomain: Domain = {
+// 1. 修正 defaultDomain 的 renewUrl 字段类型
+// 检查 Domain 类型定义，若从 api.ts 导入的 Domain 没有 renewUrl，可在 defaultDomain 处断言 as Domain
+const defaultDomain = {
   domain: '',
   status: 'active',
   registrar: '',
   registerDate: '',
   expireDate: '',
   renewUrl: '',
-};
+} as Domain;
 
 const App: React.FC = () => {
   const [loading, setLoading] = useState(true);
@@ -64,7 +58,6 @@ const App: React.FC = () => {
   const [bgImageUrl, setBgImageUrl] = useState(() => localStorage.getItem('customBgImageUrl') || '');
   const [selectedIndexes, setSelectedIndexes] = useState<number[]>([]);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
-@@ -68,19 +58,13 @@
   const todayStr = new Date().toISOString().slice(0, 10);
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'expired' | 'pending'>('all');
   const editRowRef = React.useRef<HTMLTableRowElement>(null);
@@ -84,7 +77,11 @@ const App: React.FC = () => {
   async function handleFormSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     let newDomains = [...domains];
-@@ -93,66 +77,61 @@
+    if (editIndex === -1) {
+      newDomains.push(form);
+    } else {
+      newDomains[editIndex] = form;
+    }
     setModalOpen(false);
     setEditIndex(-1);
     setForm(defaultDomain);
@@ -166,11 +163,20 @@ const App: React.FC = () => {
   const carouselTimer = useRef<number | null>(null);
 
   // 加载轮播图片列表，修复fetch空内容报错
-  const carouselTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   useEffect(() => {
     fetch('/image/images.json')
       .then(res => res.text())
-@@ -164,67 +143,57 @@
+      .then(text => {
+        try {
+          const data = JSON.parse(text);
+          if (Array.isArray(data) && data.length > 0) {
+            setCarouselImages(data);
+          } else {
+            setCarouselImages(["background.jpeg"]);
+          }
+        } catch (e) {
+          setCarouselImages(["background.jpeg"]);
+        }
       })
       .catch(() => setCarouselImages(["background.jpeg"]));
   }, []);
@@ -185,8 +191,10 @@ const App: React.FC = () => {
   useEffect(() => {
     if (bgImageUrl && bgImageUrl.trim() !== '') {
       // 用户自定义图片，直接显示
-    document.body.style.backgroundImage = `url('${bgImageUrl}')`;
       document.body.style.backgroundImage = `url('${bgImageUrl}')`;
+      document.body.style.backgroundSize = 'cover';
+      document.body.style.backgroundRepeat = 'no-repeat';
+      document.body.style.backgroundPosition = 'center center';
       if (carouselTimer.current) clearInterval(carouselTimer.current);
       return;
     }
@@ -195,9 +203,6 @@ const App: React.FC = () => {
     function setBg(idx: number) {
       const url = `/image/${carouselImages[idx]}`;
       document.body.style.backgroundImage = `url('${url}')`;
-    document.body.style.backgroundSize = 'cover';
-    document.body.style.backgroundRepeat = 'no-repeat';
-    document.body.style.backgroundPosition = 'center center';
       document.body.style.backgroundSize = 'cover';
       document.body.style.backgroundRepeat = 'no-repeat';
       document.body.style.backgroundPosition = 'center center';
@@ -208,7 +213,6 @@ const App: React.FC = () => {
       carouselIndex.current = (carouselIndex.current + 1) % carouselImages.length;
       setBg(carouselIndex.current);
     }, carouselInterval * 1000); // 轮播间隔可配置
-    }, carouselInterval * 1000);
     return () => {
       if (carouselTimer.current) clearInterval(carouselTimer.current);
     };
@@ -244,7 +248,13 @@ const App: React.FC = () => {
   function checkExpiringDomains(domains: Domain[]) {
     const warningDays = parseInt(localStorage.getItem('notificationWarningDays') || '15', 10);
     const today = new Date();
-@@ -239,29 +208,25 @@
+    const expiring = domains.filter(domain => {
+      const expireDate = new Date(domain.expireDate);
+      const daysLeft = Math.ceil((expireDate.getTime() - today.getTime()) / (24 * 60 * 60 * 1000));
+      return daysLeft <= warningDays && domain.status !== 'expired';
+    });
+    setExpiringDomains(expiring);
+    if (expiring.length > 0 && notificationEnabled === 'true') {
       notifyExpiring(expiring);
     }
   }
@@ -265,8 +275,6 @@ const App: React.FC = () => {
     const domainToDelete = domains[index];
     if (window.confirm(`确定要删除域名 "${domainToDelete.domain}" 吗？`)) {
       deleteDomain(domainToDelete.id || 0);
-    loadDomains();
-      deleteDomain(String(domainToDelete.id || 0));
       loadDomains();
       setOpMsg('域名删除成功');
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -277,28 +285,32 @@ const App: React.FC = () => {
   function exportDomainsToJSON() {
     try {
       const blob = new Blob([JSON.stringify(domains, null, 2)], { type: 'application/json' });
-@@ -290,17 +255,16 @@
-        if (!Array.isArray(data)) throw new Error('格式错误');
-        await saveDomains(data);
-        setSelectedIndexes([]);
-        loadDomains();
-        await loadDomains();
-        setOpMsg('恢复成功！');
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      } catch {
-        setOpMsg('JSON格式无效或数据损坏');
-      }
-    };
-    reader.readAsText(file, 'utf-8');
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', 'domains.json');
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setOpMsg('导出成功');
+    } catch {
+      setOpMsg('导出失败');
+    }
   }
 
   // 6. 状态筛选与搜索
-  function filteredDomains() {
   function filteredDomains(): Domain[] {
     let list = domains.filter((domain: Domain) =>
       domain.domain.toLowerCase().includes(search.toLowerCase()) ||
       domain.registrar.toLowerCase().includes(search.toLowerCase()) ||
-@@ -310,7 +274,6 @@
+      domain.status.toLowerCase().includes(search.toLowerCase())
+    );
+
+    if (filterStatus !== 'all') {
+      list = list.filter((domain: Domain) => domain.status === filterStatus);
+    }
+
+    if (sortField) {
       list = [...list].sort((a: Domain, b: Domain) => {
         let valA: any = a[sortField as keyof Domain];
         let valB: any = b[sortField as keyof Domain];
@@ -306,7 +318,12 @@ const App: React.FC = () => {
         if (sortField === 'daysLeft') {
           valA = Math.ceil((new Date(a.expireDate).getTime() - Date.now()) / (24 * 60 * 60 * 1000));
           valB = Math.ceil((new Date(b.expireDate).getTime() - Date.now()) / (24 * 60 * 60 * 1000));
-@@ -324,25 +287,19 @@
+        } else if (sortField === 'progress') {
+          valA = calculateProgress(a.registerDate, a.expireDate);
+          valB = calculateProgress(b.registerDate, b.expireDate);
+        }
+        if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
+        if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
         return 0;
       });
     } else {
@@ -332,14 +349,21 @@ const App: React.FC = () => {
   function handleSelectAll(e: React.ChangeEvent<HTMLInputElement>) {
     if (e.target.checked) {
       setSelectedIndexes(filteredDomains().map((_: Domain, idx: number) => idx));
-@@ -359,29 +316,31 @@
-    const newDomains = domains.filter((_: Domain, idx: number) => !selectedIndexes.includes(idx));
-    await saveDomains(newDomains);
-    setSelectedIndexes([]);
-    loadDomains();
-    await loadDomains();
-    setOpMsg('批量删除成功');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      setSelectedIndexes([]);
+    }
+  }
+
+  async function handleBatchDelete() {
+    if (selectedIndexes.length === 0) return alert('请先选择要操作的域名');
+    if (window.confirm(`确定要删除选中的 ${selectedIndexes.length} 个域名吗？`)) {
+      const newDomains = domains.filter((_: Domain, idx: number) => !selectedIndexes.includes(idx));
+      await saveDomains(newDomains);
+      setSelectedIndexes([]);
+      loadDomains();
+      setOpMsg('批量删除成功');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   }
   async function handleBatchSetStatus(status: string) {
     if (selectedIndexes.length === 0) return alert('请先选择要操作的域名');
@@ -353,7 +377,6 @@ const App: React.FC = () => {
     await saveDomains(newDomains);
     setSelectedIndexes([]);
     loadDomains();
-    await loadDomains();
     setOpMsg('批量状态修改成功');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
@@ -372,7 +395,8 @@ const App: React.FC = () => {
         let methods = data.settings.notificationMethod;
         if (Array.isArray(methods)) setNotificationMethods(methods);
         else if (typeof methods === 'string') {
-@@ -390,8 +349,6 @@
+          setNotificationMethods(methods.split(',').map(m => m.trim()));
+        }
       }
     });
   }, []);
@@ -381,23 +405,25 @@ const App: React.FC = () => {
   async function saveNotificationSettings() {
     const res = await saveNotificationSettingsToServer({
       warningDays,
-@@ -400,7 +357,7 @@
-      notificationMethod: JSON.stringify(notificationMethods)
+      notificationEnabled,
+      notificationInterval,
+      notificationMethod: notificationMethods.join(',')
     });
     if (res.success) {
-    alert('通知设置已保存');
       alert('通知设置已保存');
     } else {
       alert('保存失败：' + (res.error || '未知错误'));
     }
-@@ -410,33 +367,30 @@
-    localStorage.setItem('carouselInterval', String(carouselInterval));
+  }
+
+  // 背景图片保存逻辑
+  function saveBgImage() {
+    localStorage.setItem('customBgImageUrl', bgImageUrl);
     alert('背景图片已保存');
   }
   // 恢复默认背景图片逻辑
   function resetBgImage() {
     setBgImageUrl(''); // 输入框清空
-    setBgImageUrl('');
     localStorage.removeItem('customBgImageUrl');
     // 立即切换为默认背景
     document.body.style.backgroundImage = `url('/image/background.jpeg')`;
@@ -415,7 +441,6 @@ const App: React.FC = () => {
     try {
       const header = ['域名','注册商','注册日期','过期日期','状态'];
       const rows = domains.map(d => [
-      const rows = domains.map((d: Domain) => [
         d.domain,
         d.registrar,
         d.registerDate,
@@ -423,26 +448,27 @@ const App: React.FC = () => {
         d.status === 'active' ? '正常' : d.status === 'expired' ? '已过期' : '待激活'
       ]);
       let csvContent = header.join(',') + '\n' + rows.map(r => r.join(',')).join('\n');
-      let csvContent = header.join(',') + '\n' + rows.map((r: string[]) => r.join(',')).join('\n');
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
-@@ -450,68 +404,63 @@
+      link.setAttribute('href', url);
+      link.setAttribute('download', 'domains.csv');
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setOpMsg('导出成功');
+    } catch {
       setOpMsg('导出失败');
     }
   }
   function importDomainsFromCSV() {
     if (!fileInputRef.current || !fileInputRef.current.files || fileInputRef.current.files.length === 0) {
       setOpMsg('请先选择CSV文件');
-  function handleExport(format: 'csv' | 'json' | 'txt') {
-    if (!domains || domains.length === 0) {
-      setOpMsg('暂无域名数据可导出');
       return;
     }
     const file = fileInputRef.current.files[0];
     const reader = new FileReader();
     reader.onload = async function(e) {
-    if (format === 'csv' || format === 'txt') {
       try {
         const text = e.target?.result as string;
         const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
@@ -464,8 +490,22 @@ const App: React.FC = () => {
         setSelectedIndexes([]);
         loadDomains();
         setOpMsg('导入成功！');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
       } catch (err: any) {
         setOpMsg(err.message || '导入失败');
+        console.error('导入本地CSV/TXT失败:', err); // 新增详细日志
+      }
+    };
+    reader.readAsText(file, 'utf-8');
+  }
+
+  function handleExport(format: 'csv' | 'json' | 'txt') {
+    if (!domains || domains.length === 0) {
+      setOpMsg('暂无域名数据可导出');
+      return;
+    }
+    if (format === 'csv' || format === 'txt') {
+      try {
         const header = ['域名','注册商','注册日期','过期日期','状态'];
         const rows = domains.map((d: Domain) => [
           d.domain,
@@ -487,13 +527,6 @@ const App: React.FC = () => {
       } catch {
         setOpMsg('导出失败');
       }
-    };
-    reader.readAsText(file, 'utf-8');
-  }
-
-  function getSortClass(field: string) {
-    if (sortField === field) return sortOrder === 'asc' ? 'sorted-asc' : 'sorted-desc';
-    return '';
     } else if (format === 'json') {
       try {
         const blob = new Blob([JSON.stringify(domains, null, 2)], { type: 'application/json' });
@@ -535,125 +568,133 @@ const App: React.FC = () => {
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     if (!e.target.files || e.target.files.length === 0) {
       setOpMsg('请先选择文件');
-@@ -526,10 +475,7 @@
-          const text = evt.target?.result as string;
+      return;
+    }
+    const file = e.target.files[0];
+    const reader = new FileReader();
+    reader.onload = async function(evt) {
+      try {
+        const text = evt.target?.result as string;
+        const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
+        if (lines.length < 2) throw new Error('CSV文件内容无效');
+        // 处理引号和逗号分隔
+        function parseCSVLine(line: string) {
+          // 简单处理：去除每个字段前后的引号和空格
+          // 支持逗号分隔和引号包裹
+          const result: string[] = [];
+          let current = '';
+          let inQuotes = false;
+          for (let i = 0; i < line.length; i++) {
+            const char = line[i];
+            if (char === '"' && !inQuotes) {
+              inQuotes = true;
+            } else if (char === '"' && inQuotes) {
+              inQuotes = false;
+            } else if (char === ',' && !inQuotes) {
+              result.push(current);
+              current = '';
+            } else {
+              current += char;
+            }
+          }
+          result.push(current);
+          return result.map(cell => cell.replace(/^"|"$/g, '').trim());
+        }
+        const headerRaw = parseCSVLine(lines[0]);
+        // 字段名归一化函数
+        function norm(s: string) {
+          return s.replace(/^"|"$/g, '').replace(/[_\s-]/g, '').toLowerCase();
+        }
+        // 字段映射表，支持多种写法
+        const fieldMap: Record<string, string> = {
+          'id': 'id',
+          '域名': 'domain', 'domain': 'domain',
+          '注册商': 'registrar', 'registrar': 'registrar',
+          '注册日期': 'registerDate', 'register_date': 'registerDate',
+          '过期日期': 'expireDate', 'expire_date': 'expireDate',
+          '状态': 'status', 'status': 'status',
+          '续期链接': 'renewUrl', 'renewurl': 'renewUrl', 'renew_url': 'renewUrl'
+        };
+        // 归一化后的header
+        const headerNorm = headerRaw.map(norm);
+        // 找到每个字段在header中的索引
+        const colIdx: Partial<Record<'id'|'domain'|'registrar'|'registerDate'|'expireDate'|'status'|'renewUrl', number>> = {};
+        headerNorm.forEach((h, idx) => {
+          const mapped = fieldMap[h];
+          if (mapped && colIdx[mapped as keyof typeof colIdx] === undefined) colIdx[mapped as keyof typeof colIdx] = idx;
+        });
+        if (colIdx.domain === undefined || colIdx.registrar === undefined || colIdx.registerDate === undefined || colIdx.expireDate === undefined || colIdx.status === undefined) {
+          throw new Error('CSV表头需包含:id(可选)、域名/domain、注册商/registrar、注册日期/register_date、过期日期/expire_date、状态/status');
+        }
+        const newDomains = lines.slice(1).map(line => {
+          const cols = parseCSVLine(line);
+          return {
+            id: parseInt(cols[colIdx.id || 0], 10), // 尝试解析id
+            domain: cols[colIdx.domain],
+            registrar: cols[colIdx.registrar],
+            registerDate: cols[colIdx.registerDate],
+            expireDate: cols[colIdx.expireDate],
+            status: cols[colIdx.status] as 'active' | 'expired' | 'pending',
+            renewUrl: cols[colIdx.renewUrl] || undefined
+          };
+        });
+        await saveDomains(newDomains);
+        setSelectedIndexes([]);
+        loadDomains();
+        setOpMsg('导入成功！');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } catch (err: any) {
+        setOpMsg(err.message || '导入失败');
+        console.error('导入本地CSV/TXT失败:', err); // 新增详细日志
+      }
+    };
+    reader.readAsText(file, 'utf-8');
+  }
+
+  function handleImport(format: 'csv' | 'json') {
+    if (!fileInputRef.current || !fileInputRef.current.files || fileInputRef.current.files.length === 0) {
+      setOpMsg('请先选择文件');
+      return;
+    }
+    const file = fileInputRef.current.files[0];
+    const reader = new FileReader();
+    reader.onload = async function(evt) {
+      try {
+        const text = evt.target?.result as string;
+        if (format === 'csv') {
           const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
           if (lines.length < 2) throw new Error('CSV文件内容无效');
-          // 处理引号和逗号分隔
-          function parseCSVLine(line: string) {
-            // 简单处理：去除每个字段前后的引号和空格
-            // 支持逗号分隔和引号包裹
-            const result: string[] = [];
-            let current = '';
-            let inQuotes = false;
-@@ -548,11 +494,9 @@
-            return result.map(cell => cell.replace(/^"|"$/g, '').trim());
-          }
-          const headerRaw = parseCSVLine(lines[0]);
-          // 字段名归一化函数
-          function norm(s: string) {
-            return s.replace(/^"|"$/g, '').replace(/[_\s-]/g, '').toLowerCase();
-          }
-          // 字段映射表，支持多种写法
-          const fieldMap: Record<string, string> = {
-            'id': 'id',
-            '域名': 'domain', 'domain': 'domain',
-@@ -562,16 +506,14 @@
-            '状态': 'status', 'status': 'status',
-            '续期链接': 'renewUrl', 'renewurl': 'renewUrl', 'renew_url': 'renewUrl'
-          };
-          // 归一化后的header
-          const headerNorm = headerRaw.map(norm);
-          // 找到每个字段在header中的索引
-          const colIdx: Partial<Record<'id'|'domain'|'registrar'|'registerDate'|'expireDate'|'status'|'renewUrl', number>> = {};
-          headerNorm.forEach((h, idx) => {
-            const mapped = fieldMap[h];
-            if (mapped && colIdx[mapped as keyof typeof colIdx] === undefined) colIdx[mapped as keyof typeof colIdx] = idx;
-          });
-          if (colIdx.domain === undefined || colIdx.registrar === undefined || colIdx.registerDate === undefined || colIdx.expireDate === undefined || colIdx.status === undefined) {
-            throw new Error('CSV表头需包含：id(可选)、域名/domain，注册商/registrar，注册日期/register_date，过期日期/expire_date，状态/status（支持多种写法）');
-            throw new Error('CSV表头需包含:id(可选)、域名/domain、注册商/registrar、注册日期/register_date、过期日期/expire_date、状态/status');
-          }
+          const header = lines[0].split(',');
+          const expectedHeader = ['域名','注册商','注册日期','过期日期','状态'];
+          if (header.join(',') !== expectedHeader.join(',')) throw new Error('CSV表头格式不正确');
           const newDomains = lines.slice(1).map(line => {
-            const cols = parseCSVLine(line);
-@@ -594,10 +536,12 @@
+            const cols = line.split(',');
+            return {
+              domain: cols[0],
+              registrar: cols[1],
+              registerDate: cols[2],
+              expireDate: cols[3],
+              status: (cols[4] === '正常') ? 'active' : (cols[4] === '已过期' ? 'expired' : 'pending')
+            };
           });
           await saveDomains(newDomains);
           setSelectedIndexes([]);
           loadDomains();
-          await loadDomains();
           setOpMsg('导入成功！');
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-        } catch (err: any) {
-          setOpMsg(err.message || '导入失败');
-          console.error('导入本地CSV/TXT失败:', err); // 新增详细日志
-        }
-      };
-      reader.readAsText(file, 'utf-8');
-@@ -609,159 +553,76 @@
+        } else if (format === 'json') {
+          const data = JSON.parse(text);
           if (!Array.isArray(data)) throw new Error('JSON格式错误');
           await saveDomains(data);
           setSelectedIndexes([]);
           loadDomains();
-          await loadDomains();
           setOpMsg('导入成功！');
-        } catch {
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-        } catch (err) {
-          setOpMsg('JSON格式无效或数据损坏');
-          console.error('导入本地JSON失败:', err); // 新增详细日志
         }
-      };
-      reader.readAsText(file, 'utf-8');
-    } else {
-      setOpMsg('仅支持csv、json、txt格式');
-    }
-  }
-
-  // 导出多种格式
-  function handleExport(format: 'csv' | 'json' | 'txt') {
-    if (!domains || domains.length === 0) {
-      setOpMsg('暂无域名数据可导出');
-      return;
-    }
-    if (format === 'csv' || format === 'txt') {
-      try {
-        const header = ['域名','注册商','注册日期','过期日期','状态'];
-        const rows = domains.map((d: Domain) => [
-          d.domain,
-          d.registrar,
-          d.registerDate,
-          d.expireDate,
-          d.status === 'active' ? '正常' : d.status === 'expired' ? '已过期' : '待激活'
-        ]);
-        let content = header.join(',') + '\n' + rows.map((r: string[]) => r.join(',')).join('\n');
-        const blob = new Blob([content], { type: format === 'csv' ? 'text/csv;charset=utf-8;' : 'text/plain;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.setAttribute('href', url);
-        link.setAttribute('download', `domains.${format}`);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        setOpMsg('导出成功');
-      } catch {
-        setOpMsg('导出失败');
+      } catch (err: any) {
+        setOpMsg(err.message || '导入失败');
+        console.error('导入本地JSON失败:', err); // 新增详细日志
       }
-    } else if (format === 'json') {
-      try {
-        const blob = new Blob([JSON.stringify(domains, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.setAttribute('href', url);
-        link.setAttribute('download', 'domains.json');
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        setOpMsg('导出成功');
-      } catch {
-        setOpMsg('导出失败');
-      }
-    }
+    };
+    reader.readAsText(file, 'utf-8');
   }
 
   // 统计卡片样式
@@ -712,6 +753,8 @@ const App: React.FC = () => {
     } catch (e: any) {
       setOpMsg('WebDAV下载失败: ' + (e.message || e));
     }
+  }
+
   function getSortClass(field: string) {
     if (sortField === field) return sortOrder === 'asc' ? 'sorted-asc' : 'sorted-desc';
     return '';
@@ -749,7 +792,6 @@ const App: React.FC = () => {
         </div>
       </div>
       <div className="domain-table" style={{ ...(isMobile ? { fontSize: 12 } : {}), width: '100%', minWidth: 0, margin: '0 auto', overflowX: 'visible', maxWidth: 1300 }}>
-      <div className="domain-table" style={{ width: '100%', minWidth: 0, margin: '0 auto', overflowX: 'visible', maxWidth: 1300 }}>
         <div className="table-header">
           <h2>域名列表</h2>
           <div className="search-box">
@@ -783,7 +825,76 @@ const App: React.FC = () => {
         <div className="table-container" style={isMobile ? { maxHeight: 480, position: 'relative' } : { width: '100%' }} onScroll={handleTableScroll}>
           <table style={{ width: '100%' }}>
             <thead>
-@@ -847,29 +708,16 @@
+              <tr>
+                <th>
+                  <input
+                    type="checkbox"
+                    checked={selectedIndexes.length === filteredDomains().length && filteredDomains().length > 0}
+                    onChange={handleSelectAll}
+                    style={{ accentColor: '#fff', width: 20, height: 20 }}
+                  />
+                </th>
+                <th style={{ cursor: 'pointer', ...getSortClass('domain') }} onClick={() => setSortField('domain')}>域名</th>
+                <th style={{ cursor: 'pointer', ...getSortClass('registrar') }} onClick={() => setSortField('registrar')}>注册商</th>
+                <th style={{ cursor: 'pointer', ...getSortClass('registerDate') }} onClick={() => setSortField('registerDate')}>注册日期</th>
+                <th style={{ cursor: 'pointer', ...getSortClass('expireDate') }} onClick={() => setSortField('expireDate')}>过期日期</th>
+                <th style={{ cursor: 'pointer', ...getSortClass('status') }} onClick={() => setSortField('status')}>状态</th>
+                <th style={{ cursor: 'pointer', ...getSortClass('daysLeft') }} onClick={() => setSortField('daysLeft')}>到期天数</th>
+                <th style={{ cursor: 'pointer', ...getSortClass('progress') }} onClick={() => setSortField('progress')}>使用进度</th>
+                <th style={{ cursor: 'pointer', ...getSortClass('renewUrl') }} onClick={() => setSortField('renewUrl')}>续期链接</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              {paged.map((domain, index) => (
+                <tr
+                  key={domain.id || index}
+                  ref={editIndex === index ? editRowRef : null}
+                  style={{
+                    background: selectedIndexes.includes(index) ? 'rgba(255, 182, 193, 0.2)' : 'transparent',
+                    cursor: 'pointer',
+                    transition: 'background 0.2s',
+                  }}
+                  onClick={() => handleEdit(index)}
+                >
+                  <td>
+                    <input
+                      type="checkbox"
+                      checked={selectedIndexes.includes(index)}
+                      onChange={() => {
+                        setSelectedIndexes(prev => {
+                          const newSelected = [...prev];
+                          if (newSelected.includes(index)) {
+                            newSelected.splice(newSelected.indexOf(index), 1);
+                          } else {
+                            newSelected.push(index);
+                          }
+                          return newSelected;
+                        });
+                      }}
+                      style={{ accentColor: '#fff', width: 20, height: 20 }}
+                    />
+                  </td>
+                  <td>{domain.domain}</td>
+                  <td>{domain.registrar}</td>
+                  <td>{domain.registerDate}</td>
+                  <td>{domain.expireDate}</td>
+                  <td>{STATUS_LABELS[domain.status]}</td>
+                  <td>{calculateProgress(domain.registerDate, domain.expireDate) === 100 ? '已过期' : `${Math.ceil((new Date(domain.expireDate).getTime() - Date.now()) / (24 * 60 * 60 * 1000))}天`}</td>
+                  <td>
+                    <div className="progress-bar-container">
+                      <div
+                        className="progress-bar"
+                        style={{ width: `${calculateProgress(domain.registerDate, domain.expireDate)}%`, background: getProgressClass(calculateProgress(domain.registerDate, domain.expireDate)) }}
+                      ></div>
+                    </div>
+                  </td>
+                  <td>{domain.renewUrl ? <a href={domain.renewUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#007bff', textDecoration: 'underline' }}>{domain.renewUrl}</a> : '无'}</td>
+                  <td>
+                    <button className="btn btn-danger" onClick={(e) => { e.stopPropagation(); handleDelete(index); }}>删除</button>
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
@@ -800,7 +911,6 @@ const App: React.FC = () => {
             paddingLeft: 180, // 微调让“第 x / y 页”视觉中心对齐注册日期/过期日期中间
           }}
         >
-        <div style={{ margin: '10px 0', display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', width: '100%', maxWidth: 900, paddingLeft: 180 }}>
           <span>每页</span>
           <select value={pageSize} onChange={e => { setPageSize(Number(e.target.value)); setPage(1); }}>
             {[10, 20, 50, 100].map(size => <option key={size} value={size}>{size}</option>)}
@@ -816,7 +926,9 @@ const App: React.FC = () => {
       </div>
       <button className="add-domain-btn" onClick={handleAdd}>+</button>
       {modalOpen && (
-@@ -881,34 +729,112 @@
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <h3>{editIndex === -1 ? '添加域名' : '编辑域名'}</h3>
             <form onSubmit={handleFormSubmit}>
               <div className="form-group">
                 <label htmlFor="domain">域名</label>
@@ -893,20 +1005,6 @@ const App: React.FC = () => {
               <div className="form-group">
                 <label htmlFor="status">状态</label>
                 <select id="status" value={form.status} onChange={handleFormChange} required>
-                <select id="status" value={form.status} onChange={handleFormChange} required style={{
-                  background: 'rgba(40,40,40,0.35)',
-                  color: '#fff',
-                  border: '1px solid #444',
-                  borderRadius: 10,
-                  padding: '10px 18px',
-                  fontSize: 18,
-                  outline: 'none',
-                  width: '100%',
-                  boxSizing: 'border-box',
-                  backdropFilter: 'blur(8px)',
-                  WebkitBackdropFilter: 'blur(8px)',
-                  transition: 'background 0.2s',
-                }}>
                   <option value="active">正常</option>
                   <option value="expired">已过期</option>
                   <option value="pending">待激活</option>
@@ -936,44 +1034,36 @@ const App: React.FC = () => {
                 <button type="submit" className="btn btn-primary">保存</button>
               </div>
             </form>
-@@ -950,20 +876,59 @@
+          </div>
+        </div>
+      )}
+      {expireModal && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <h3>域名即将过期通知</h3>
+            <p>域名 "{expiringDomains[0]?.domain}" 即将在 {expiringDomains[0]?.daysLeft} 天内过期。</p>
+            <p>请及时续费，以免影响网站正常访问。</p>
+            <div className="modal-buttons">
+              <button className="btn btn-primary" onClick={() => handleCloseExpireModal(false)}>不再提醒</button>
+              <button className="btn btn-secondary" style={{ ...sakuraBtnStyle }} onClick={() => handleCloseExpireModal(true)}>关闭</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {settingsOpen && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <h3>系统设置</h3>
+            <div className="settings-section">
               <h4>📅 通知设置</h4>
               <div className="form-group">
                 <label>提前通知天数</label>
                 <input type="number" min={1} max={365} value={warningDays} onChange={e => setWarningDays(e.target.value)} />
-                <input type="number" min={1} max={365} value={warningDays} onChange={e => setWarningDays(e.target.value)} style={{
-                  background: 'rgba(40,40,40,0.35)',
-                  color: '#fff',
-                  border: '1px solid #444',
-                  borderRadius: 10,
-                  padding: '10px 18px',
-                  fontSize: 18,
-                  outline: 'none',
-                  width: '100%',
-                  boxSizing: 'border-box',
-                  backdropFilter: 'blur(8px)',
-                  WebkitBackdropFilter: 'blur(8px)',
-                  transition: 'background 0.2s',
-                }} />
                 <small style={{ color: '#666', fontSize: '0.9rem' }}>设置域名到期前多少天开始通知（1-365天）</small>
               </div>
               <div className="form-group">
                 <label>启用自动通知</label>
                 <select value={notificationEnabled} onChange={e => setNotificationEnabled(e.target.value)}>
-                <select value={notificationEnabled} onChange={e => setNotificationEnabled(e.target.value)} style={{
-                  background: 'rgba(40,40,40,0.35)',
-                  color: '#fff',
-                  border: '1px solid #444',
-                  borderRadius: 10,
-                  padding: '10px 18px',
-                  fontSize: 18,
-                  outline: 'none',
-                  width: '100%',
-                  boxSizing: 'border-box',
-                  backdropFilter: 'blur(8px)',
-                  WebkitBackdropFilter: 'blur(8px)',
-                  transition: 'background 0.2s',
-                }}>
                   <option value="true">启用</option>
                   <option value="false">禁用</option>
                 </select>
@@ -982,94 +1072,31 @@ const App: React.FC = () => {
               <div className="form-group">
                 <label>通知频率</label>
                 <select value={notificationInterval} onChange={e => setNotificationInterval(e.target.value)}>
-                <select value={notificationInterval} onChange={e => setNotificationInterval(e.target.value)} style={{
-                  background: 'rgba(40,40,40,0.35)',
-                  color: '#fff',
-                  border: '1px solid #444',
-                  borderRadius: 10,
-                  padding: '10px 18px',
-                  fontSize: 18,
-                  outline: 'none',
-                  width: '100%',
-                  boxSizing: 'border-box',
-                  backdropFilter: 'blur(8px)',
-                  WebkitBackdropFilter: 'blur(8px)',
-                  transition: 'background 0.2s',
-                }}>
                   <option value="daily">每天</option>
                   <option value="weekly">每周</option>
                   <option value="once">仅一次</option>
-@@ -1016,13 +981,24 @@
-                              : prev.filter(m => m !== method)
-                          );
-                        }}
-                        style={{ marginRight: 8, accentColor: notificationMethods.includes(method) ? '#fff' : '#bbb', width: 18, height: 18 }}
-                        style={{
-                          marginRight: 8,
-                          accentColor: notificationMethods.includes(method) ? '#fff' : '#bbb',
-                          width: 18,
-                          height: 18,
-                          background: 'rgba(40,40,40,0.35)',
-                          border: '1px solid #444',
-                          borderRadius: 6,
-                          backdropFilter: 'blur(8px)',
-                          WebkitBackdropFilter: 'blur(8px)',
-                          transition: 'background 0.2s',
-                        }}
-                      />
-                      {method === 'wechat' ? '微信' : method === 'qq' ? 'QQ' : method === 'email' ? '邮件' : 'Telegram'}
-                    </label>
-                  ))}
-                </div>
-                <small style={{ color: '#666', fontSize: '0.9rem' }}>可多选，通知会同时发送到所有勾选方式</small>
+                </select>
                 <small style={{ color: '#666', fontSize: '0.9rem' }}>可多选、支持邮件、Telegram、微信（Server酱）、QQ（Qmsg酱）、等多种通知方式</small>
               </div>
               <div className="modal-buttons">
                 <button className="btn btn-primary" onClick={saveNotificationSettings}>保存设置</button>
-@@ -1032,44 +1008,133 @@
+                <button className="btn btn-secondary" style={{ ...sakuraBtnStyle }} onClick={() => setSettingsOpen(false)}>关闭</button>
+              </div>
+            </div>
+            <div className="settings-section">
               <h4>🖼️ 更换背景图片</h4>
               <div className="form-group">
                 <label>背景图片URL</label>
                 <input type="url" value={bgImageUrl} onChange={e => setBgImageUrl(e.target.value)} placeholder="https://example.com/bg.jpg" />
-                <input type="url" value={bgImageUrl} onChange={e => setBgImageUrl(e.target.value)} placeholder="https://example.com/bg.jpg" style={{
-                  background: 'rgba(40,40,40,0.35)',
-                  color: '#fff',
-                  border: '1px solid #444',
-                  borderRadius: 10,
-                  padding: '10px 18px',
-                  fontSize: 18,
-                  outline: 'none',
-                  width: '100%',
-                  boxSizing: 'border-box',
-                  backdropFilter: 'blur(8px)',
-                  WebkitBackdropFilter: 'blur(8px)',
-                  transition: 'background 0.2s',
-                }} />
               </div>
               <div className="form-group">
                 <label>轮播时长（秒）</label>
                 <input type="number" min={5} max={600} value={carouselInterval} onChange={e => setCarouselInterval(Number(e.target.value))} />
                 <small style={{ color: '#666', fontSize: '0.9rem' }}>设置public/image文件夹内图片轮播间隔，建议5-600秒</small>
-                <input type="number" min={5} max={600} value={carouselInterval} onChange={e => setCarouselInterval(Number(e.target.value))} style={{
-                  background: 'rgba(40,40,40,0.35)',
-                  color: '#fff',
-                  border: '1px solid #444',
-                  borderRadius: 10,
-                  padding: '10px 18px',
-                  fontSize: 18,
-                  outline: 'none',
-                  width: '100%',
-                  boxSizing: 'border-box',
-                  backdropFilter: 'blur(8px)',
-                  WebkitBackdropFilter: 'blur(8px)',
-                  transition: 'background 0.2s',
-                }} />
-                <small style={{ color: '#666', fontSize: '0.9rem' }}>设置 public/image 文件夹内图片轮播间隔，建议5-600秒</small>
               </div>
               <div className="modal-buttons">
                 <button className="btn btn-primary" onClick={saveBgImage}>保存背景</button>
                 <button className="btn btn-secondary" style={{ ...sakuraBtnStyle }} onClick={resetBgImage}>恢复默认</button>
-                <button className="btn btn-secondary" style={{ backgroundColor: '#ffb6c1', borderColor: '#ffb6c1', color: '#fff' }} onClick={resetBgImage}>恢复默认</button>
               </div>
               <small style={{ color: '#666', fontSize: '0.9rem' }}>支持jpg/png/webp等图片格式，建议高清大图。</small>
             </div>
@@ -1078,34 +1105,17 @@ const App: React.FC = () => {
               <div className="form-group" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 12 }}>
                 <label htmlFor="exportFormat" style={{ marginRight: 8 }}>导出格式：</label>
                 <select id="exportFormat" value={exportFormat} onChange={e => setExportFormat(e.target.value as 'csv' | 'json' | 'txt')} style={{ minWidth: 90, marginRight: 8 }}>
-                <select id="exportFormat" value={exportFormat} onChange={e => setExportFormat(e.target.value as 'csv' | 'json' | 'txt')} style={{
-                  background: 'rgba(40,40,40,0.35)',
-                  color: '#fff',
-                  border: '1px solid #444',
-                  borderRadius: 10,
-                  padding: '10px 18px',
-                  fontSize: 18,
-                  outline: 'none',
-                  minWidth: 90,
-                  marginRight: 8,
-                  boxSizing: 'border-box',
-                  backdropFilter: 'blur(8px)',
-                  WebkitBackdropFilter: 'blur(8px)',
-                  transition: 'background 0.2s',
-                }}>
                   <option value="csv">CSV</option>
                   <option value="json">JSON</option>
                   <option value="txt">TXT</option>
                 </select>
                 <button className="btn btn-primary" onClick={() => handleExport(exportFormat)} style={{ marginRight: 24 }}>导出域名文件</button>
                 <button className="btn btn-secondary" style={{ ...sakuraBtnStyle }} onClick={handleImportClick}>导入域名文件</button>
-                <button className="btn btn-secondary" style={{ backgroundColor: '#ffb6c1', borderColor: '#ffb6c1', color: '#fff' }} onClick={handleImportClick}>导入域名文件</button>
                 <input type="file" ref={fileInputRef} accept=".csv,.json,.txt" style={{ display: 'none' }} onChange={handleFileChange} />
                 <button className="btn btn-primary" style={{ marginLeft: 8 }} onClick={uploadToWebDAV}>WebDAV上传</button>
                 <button className="btn btn-secondary" style={{ ...sakuraBtnStyle }} onClick={downloadFromWebDAV}>WebDAV下载</button>
               </div>
               <small style={{ color: '#666', fontSize: '0.9rem' }}>支持csv、json、txt格式，导入会覆盖当前所有域名数据。WebDAV参数请在Cloudflare Pages环境变量中配置：VITE_WEBDAV_URL、VITE_WEBDAV_USERNAME、VITE_WEBDAV_PASSWORD。</small>
-              <small style={{ color: '#666', fontSize: '0.9rem' }}>支持csv、json、txt格式，导入会覆盖当前所有域名数据</small>
             </div>
             <div className="settings-section">
               <h4>☁️ WebDAV备份/恢复</h4>
@@ -1168,7 +1178,5 @@ const App: React.FC = () => {
     </div>
   );
 }
-};
 
-export default App;
 export default App; 
