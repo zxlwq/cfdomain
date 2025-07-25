@@ -175,6 +175,13 @@ const App: React.FC = () => {
     const remindedFlag = localStorage.getItem('dontRemindToday');
     setDontRemindToday(remindedFlag === todayStr);
   }, [todayStr]);
+  
+  // 当 dontRemindToday 变为 false 时，重新检查即将到期的域名
+  useEffect(() => {
+    if (!dontRemindToday && domains.length > 0) {
+      checkExpiringDomains(domains);
+    }
+  }, [dontRemindToday, domains]);
   function handleCloseExpireModal(dontRemind: boolean) {
     setExpireModal(false);
     if (dontRemind) {
@@ -187,6 +194,10 @@ const App: React.FC = () => {
     try {
       const data = await fetchDomains();
       setDomains(data);
+      // 加载域名后检查是否有即将到期的域名
+      if (!dontRemindToday) {
+        checkExpiringDomains(data);
+      }
     } catch (error) {
       setOpMsg('加载域名失败');
       console.error('加载域名失败:', error); // 新增详细日志
@@ -195,6 +206,11 @@ const App: React.FC = () => {
     }
   }
   function checkExpiringDomains(domains: Domain[]) {
+    // 如果用户今天已经选择不再提醒，则不显示弹窗
+    if (dontRemindToday) {
+      return;
+    }
+    
     const warningDays = parseInt(localStorage.getItem('notificationWarningDays') || '15', 10);
     const today = new Date();
     const warningDate = new Date(today.getTime() + warningDays * 24 * 60 * 60 * 1000);
