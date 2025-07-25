@@ -2,8 +2,8 @@ export interface Domain {
   domain: string;
   status: string;
   registrar: string;
-  registerDate: string;
-  expireDate: string;
+  register_date: string;
+  expire_date: string;
 }
 
 export interface NotificationSettings {
@@ -13,15 +13,15 @@ export interface NotificationSettings {
   notificationMethod: string;
 }
 
-function getDaysUntilExpiry(expireDate: string): number {
+function getDaysUntilExpiry(expire_date: string): number {
   const today = new Date();
-  const expiry = new Date(expireDate);
+  const expiry = new Date(expire_date);
   const diffTime = expiry.getTime() - today.getTime();
   return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 }
 
-function isExpiringSoon(expireDate: string, days: number = 15): boolean {
-  const daysLeft = getDaysUntilExpiry(expireDate);
+function isExpiringSoon(expire_date: string, days: number = 15): boolean {
+  const daysLeft = getDaysUntilExpiry(expire_date);
   return daysLeft <= days && daysLeft > 0;
 }
 
@@ -121,7 +121,7 @@ export const onRequest = async (context: any) => {
           }
         } catch {}
         if (!Array.isArray(notifyMethods) || notifyMethods.length === 0) notifyMethods = ['telegram'];
-        const expiringDomains = body.domains.filter((domain: Domain) => isExpiringSoon(domain.expireDate, 15));
+        const expiringDomains = body.domains.filter((domain: Domain) => isExpiringSoon(domain.expire_date, 15));
         if (expiringDomains.length === 0) {
           return new Response(JSON.stringify({ success: true, message: '没有即将到期的域名' }), { headers: { 'content-type': 'application/json' } });
         }
@@ -137,10 +137,10 @@ export const onRequest = async (context: any) => {
               let message = '⚠️ <b>域名到期提醒</b>\n\n';
               message += `以下域名将在15天内到期：\n\n`;
               expiringDomains.forEach((domain: Domain) => {
-                const daysLeft = getDaysUntilExpiry(domain.expireDate);
+                const daysLeft = getDaysUntilExpiry(domain.expire_date);
                 message += ` <b>${domain.domain}</b>\n`;
                 message += `   注册商：${domain.registrar}\n`;
-                message += `   到期时间：${domain.expireDate}\n`;
+                message += `   到期时间：${domain.expire_date}\n`;
                 message += `   剩余天数：${daysLeft}天\n\n`;
               });
               message += `请及时续费以避免域名过期！`;
@@ -156,8 +156,8 @@ export const onRequest = async (context: any) => {
               if (!sendKey) throw new Error('未配置微信SendKey');
               let content = '以下域名将在15天内到期：\n\n';
               expiringDomains.forEach((domain: Domain) => {
-                const daysLeft = getDaysUntilExpiry(domain.expireDate);
-                content += `域名: ${domain.domain}\n注册商: ${domain.registrar}\n到期时间: ${domain.expireDate}\n剩余天数: ${daysLeft}天\n\n`;
+                const daysLeft = getDaysUntilExpiry(domain.expire_date);
+                content += `域名: ${domain.domain}\n注册商: ${domain.registrar}\n到期时间: ${domain.expire_date}\n剩余天数: ${daysLeft}天\n\n`;
               });
               content += '请及时续费以避免域名过期！';
               await sendWeChatNotify('域名到期提醒', content, sendKey);
@@ -168,8 +168,8 @@ export const onRequest = async (context: any) => {
               if (!key || !qq) throw new Error('未配置Qmsg酱 key 或 QQ号');
               let content = '以下域名将在15天内到期：\n\n';
               expiringDomains.forEach((domain: Domain) => {
-                const daysLeft = getDaysUntilExpiry(domain.expireDate);
-                content += `域名: ${domain.domain}\n注册商: ${domain.registrar}\n到期时间: ${domain.expireDate}\n剩余天数: ${daysLeft}天\n\n`;
+                const daysLeft = getDaysUntilExpiry(domain.expire_date);
+                content += `域名: ${domain.domain}\n注册商: ${domain.registrar}\n到期时间: ${domain.expire_date}\n剩余天数: ${daysLeft}天\n\n`;
               });
               content += '请及时续费以避免域名过期！';
               await sendQQNotify(content, key, qq);
@@ -179,8 +179,8 @@ export const onRequest = async (context: any) => {
               if (!mailTo) throw new Error('未配置收件人邮箱MAIL_TO');
               let content = '以下域名将在15天内到期：\n\n';
               expiringDomains.forEach((domain: Domain) => {
-                const daysLeft = getDaysUntilExpiry(domain.expireDate);
-                content += `域名: ${domain.domain}\n注册商: ${domain.registrar}\n到期时间: ${domain.expireDate}\n剩余天数: ${daysLeft}天\n\n`;
+                const daysLeft = getDaysUntilExpiry(domain.expire_date);
+                content += `域名: ${domain.domain}\n注册商: ${domain.registrar}\n到期时间: ${domain.expire_date}\n剩余天数: ${daysLeft}天\n\n`;
               });
               content += '请及时续费以避免域名过期！';
               await sendMailNotify('域名到期提醒', content, mailTo);
