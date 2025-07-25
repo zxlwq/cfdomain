@@ -239,7 +239,7 @@ const App: React.FC = () => {
     const filteredList = filteredDomains();
     const domainToDelete = filteredList[index];
     if (window.confirm(`确定要删除域名 "${domainToDelete.domain}" 吗？`)) {
-      deleteDomain(String(domainToDelete.id || 0));
+      deleteDomain(domainToDelete.domain);
       loadDomains();
       setOpMsg('域名删除成功');
       window.scrollTo({ top: 0, behavior: 'smooth' });
