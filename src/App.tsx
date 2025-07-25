@@ -245,6 +245,21 @@ const App: React.FC = () => {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   }
+
+  function handleCopyDomain(domain: string) {
+    navigator.clipboard.writeText(domain).then(() => {
+      setOpMsg('域名已复制到剪贴板');
+    }).catch(() => {
+      // 降级方案：使用传统方法复制
+      const textArea = document.createElement('textarea');
+      textArea.value = domain;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      setOpMsg('域名已复制到剪贴板');
+    });
+  }
   function exportDomainsToJSON() {
     try {
       const blob = new Blob([JSON.stringify(domains, null, 2)], { type: 'application/json' });
@@ -663,7 +678,7 @@ const App: React.FC = () => {
                 <th onClick={() => { setSortField('expire_date'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }} className={`sortable ${getSortClass('expire_date')}`} style={{ minWidth: 110 }}>过期日期</th>
                 <th onClick={() => { setSortField('daysLeft'); setSortOrder(sortField === 'daysLeft' && sortOrder === 'asc' ? 'desc' : 'asc'); }} className={`sortable ${getSortClass('daysLeft')}`} style={{ minWidth: 120 }}>到期天数</th>
                 {showProgress && <th onClick={() => { setSortField('progress'); setSortOrder(sortField === 'progress' && sortOrder === 'asc' ? 'desc' : 'asc'); }} className={`sortable ${getSortClass('progress')}`} style={{ width: 120 }}>使用进度</th>}
-                <th style={{ width: 140, position: 'relative' }}>
+                <th style={{ width: 180, position: 'relative' }}>
                   <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                     <span>操作</span>
                     <select
@@ -724,6 +739,39 @@ const App: React.FC = () => {
                             alert(`请联系注册商 ${domain.registrar} 对域名 ${domain.domain} 进行续期操作。`);
                           }
                         }}>续期</button>
+                        <button 
+                          className="btn-copy" 
+                          style={{ 
+                            width: 40, 
+                            height: 40, 
+                            padding: 0, 
+                            textAlign: 'center',
+                            background: 'transparent',
+                            border: '1px solid #444',
+                            borderRadius: 6,
+                            color: '#fff',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            transition: 'all 0.2s'
+                          }} 
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                            e.currentTarget.style.borderColor = '#666';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = 'transparent';
+                            e.currentTarget.style.borderColor = '#444';
+                          }}
+                          onClick={() => handleCopyDomain(domain.domain)}
+                          title="复制域名"
+                        >
+                          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                            <path fillRule="evenodd" d="M0 6.75C0 5.784.784 5 1.75 5h7.5c.966 0 1.75.784 1.75 1.75v7.5A1.75 1.75 0 019.25 16h-7.5A1.75 1.75 0 010 14.25v-7.5z"/>
+                            <path fillRule="evenodd" d="M5 1.75C5 .784 5.784 0 6.75 0h7.5C15.216 0 16 .784 16 1.75v7.5A1.75 1.75 0 0114.25 11h-7.5A1.75 1.75 0 015 9.25v-7.5z"/>
+                          </svg>
+                        </button>
                       </div>
                     </td>
                     <td style={{ width: 24, paddingLeft: 0, paddingRight: 0 }}><input type="checkbox" checked={checked} onChange={e => handleSelectRow(index + (page - 1) * pageSize, e.target.checked)} /></td>
