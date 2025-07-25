@@ -858,11 +858,10 @@ const App: React.FC = () => {
                 </div>
               ))}
             </div>
-            <div className="modal-buttons">
-              <button className="btn btn-primary" onClick={() => setExpireModal(false)}>我知道了</button>
-              <button className="btn btn-primary" onClick={() => handleCloseExpireModal(false)}>我知道了</button>
-              <button className="btn btn-secondary" onClick={() => handleCloseExpireModal(true)}>今日不再弹出</button>
-            </div>
+                    <div className="modal-buttons">
+          <button className="btn btn-primary" onClick={() => handleCloseExpireModal(false)}>我知道了</button>
+          <button className="btn btn-secondary" onClick={() => handleCloseExpireModal(true)}>今日不再弹出</button>
+        </div>
           </div>
         </div>
       )}
