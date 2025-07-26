@@ -746,10 +746,10 @@ const App: React.FC = () => {
                             height: 40, 
                             padding: 0, 
                             textAlign: 'center',
-                            background: 'transparent',
-                            border: '1px solid #444',
+                            background: 'rgba(103, 194, 58, 0.1)',
+                            border: '1px solid #67c23a',
                             borderRadius: 6,
-                            color: '#fff',
+                            color: '#67c23a',
                             cursor: 'pointer',
                             display: 'flex',
                             alignItems: 'center',
@@ -757,12 +757,14 @@ const App: React.FC = () => {
                             transition: 'all 0.2s'
                           }} 
                           onMouseEnter={(e) => {
-                            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
-                            e.currentTarget.style.borderColor = '#666';
+                            e.currentTarget.style.background = 'rgba(103, 194, 58, 0.2)';
+                            e.currentTarget.style.borderColor = '#85ce61';
+                            e.currentTarget.style.color = '#85ce61';
                           }}
                           onMouseLeave={(e) => {
-                            e.currentTarget.style.background = 'transparent';
-                            e.currentTarget.style.borderColor = '#444';
+                            e.currentTarget.style.background = 'rgba(103, 194, 58, 0.1)';
+                            e.currentTarget.style.borderColor = '#67c23a';
+                            e.currentTarget.style.color = '#67c23a';
                           }}
                           onClick={() => handleCopyDomain(domain.domain)}
                           title="复制域名"
