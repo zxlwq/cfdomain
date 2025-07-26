@@ -47,10 +47,6 @@ CREATE TABLE IF NOT EXISTS notification_settings (
 
 ## 🔧 环境变量配置
 
-### 数据库配置
-```
-DATABASE_URL
-```
 ### WebDAV 备份配置
 ```
 WEBDAV_URL
