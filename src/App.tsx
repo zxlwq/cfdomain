@@ -54,11 +54,11 @@ const App: React.FC = () => {
   const [bgImageUrl, setBgImageUrl] = useState(() => localStorage.getItem('customBgImageUrl') || '');
   const [selectedIndexes, setSelectedIndexes] = useState<number[]>([]);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const todayStr = new Date().toISOString().slice(0, 10);
   const [dontRemindToday, setDontRemindToday] = useState(() => {
     const dontRemindDate = localStorage.getItem('dontRemindToday');
     return dontRemindDate === todayStr;
   });
-  const todayStr = new Date().toISOString().slice(0, 10);
   // 检查今天是否已经发送过通知
   const [notificationSentToday, setNotificationSentToday] = useState(() => {
     const lastNotificationDate = localStorage.getItem('lastNotificationDate');
