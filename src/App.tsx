@@ -47,6 +47,8 @@ const App: React.FC = () => {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [expireModal, setExpireModal] = useState(false);
   const [expiringDomains, setExpiringDomains] = useState<Domain[]>([]);
+  const [deleteModal, setDeleteModal] = useState(false);
+  const [domainToDelete, setDomainToDelete] = useState<Domain | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [warningDays, setWarningDays] = useState(() => localStorage.getItem('notificationWarningDays') || '15');
   const [notificationEnabled, setNotificationEnabled] = useState(() => localStorage.getItem('notificationEnabled') || 'true');
@@ -292,12 +294,24 @@ const App: React.FC = () => {
   function handleDelete(index: number) {
     const filteredList = filteredDomains();
     const domainToDelete = filteredList[index];
-    if (window.confirm(`确定要删除域名 "${domainToDelete.domain}" 吗？`)) {
-      deleteDomain(domainToDelete.domain);
-      loadDomains();
+    setDomainToDelete(domainToDelete);
+    setDeleteModal(true);
+  }
+
+  async function confirmDelete() {
+    if (domainToDelete) {
+      await deleteDomain(domainToDelete.domain);
+      await loadDomains();
       setOpMsg('域名删除成功');
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
+    setDeleteModal(false);
+    setDomainToDelete(null);
+  }
+
+  function cancelDelete() {
+    setDeleteModal(false);
+    setDomainToDelete(null);
   }
 
   function handleCopyDomain(domain: string) {
@@ -1000,6 +1014,40 @@ const App: React.FC = () => {
             <div className="modal-buttons">
               <button className="btn btn-primary" onClick={() => handleCloseExpireModal(false)}>我知道了</button>
               <button className="btn btn-secondary" onClick={() => handleCloseExpireModal(true)}>今日不再弹出</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {deleteModal && (
+        <div className="modal" style={{ display: 'block' }} onClick={e => { if (e.target === e.currentTarget) cancelDelete(); }}>
+          <div className="modal-content" style={isMobile ? { width: '98%', padding: 10 } : {}}>
+            <div className="modal-header">
+              <h3>🗑️ 删除确认</h3>
+            </div>
+            <div className="modal-body">
+              <p>确定要删除以下域名吗？此操作不可撤销：</p>
+              {domainToDelete && (
+                <div style={{ 
+                  marginBottom: 10, 
+                  padding: 15, 
+                  background: 'rgba(255, 255, 255, 0.1)', 
+                  borderRadius: 12,
+                  backdropFilter: 'blur(10px)',
+                  WebkitBackdropFilter: 'blur(10px)',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+                  color: '#fff'
+                }}>
+                  <p style={{ margin: '5px 0' }}><strong>域名:</strong> {domainToDelete.domain}</p>
+                  <p style={{ margin: '5px 0' }}><strong>注册商:</strong> {domainToDelete.registrar}</p>
+                  <p style={{ margin: '5px 0' }}><strong>状态:</strong> {STATUS_LABELS[domainToDelete.status] || domainToDelete.status}</p>
+                  <p style={{ margin: '5px 0' }}><strong>过期日期:</strong> {domainToDelete.expire_date}</p>
+                </div>
+              )}
+            </div>
+            <div className="modal-buttons">
+              <button className="btn btn-danger" onClick={confirmDelete}>确认删除</button>
+              <button className="btn btn-secondary" onClick={cancelDelete}>取消</button>
             </div>
           </div>
         </div>
