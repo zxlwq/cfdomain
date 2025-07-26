@@ -894,7 +894,7 @@ const App: React.FC = () => {
       </div>
       <button className="add-domain-btn" onClick={handleAdd}>+</button>
       {modalOpen && (
-        <div className="modal" style={{ display: 'block' }} onClick={e => { if (e.target === e.currentTarget) setModalOpen(false); }}>
+        <div className="modal" style={{ display: 'block', zIndex: 9999 }} onClick={e => { if (e.target === e.currentTarget) setModalOpen(false); }}>
           <div className="modal-content" style={isMobile ? { width: '98%', padding: 10 } : {}}>
             <div className="modal-header">
               <h3>{editIndex >= 0 ? '编辑域名' : '添加新域名'}</h3>
@@ -1015,7 +1015,7 @@ const App: React.FC = () => {
         </div>
       )}
       {expireModal && (
-        <div className="modal" style={{ display: 'block' }} onClick={e => { if (e.target === e.currentTarget) setExpireModal(false); }}>
+        <div className="modal" style={{ display: 'block', zIndex: 9999 }} onClick={e => { if (e.target === e.currentTarget) setExpireModal(false); }}>
           <div className="modal-content" style={isMobile ? { width: '98%', padding: 10 } : {}}>
             <div className="modal-header">
               <h3>⚠️ 域名到期提醒</h3>
@@ -1049,7 +1049,7 @@ const App: React.FC = () => {
         </div>
       )}
       {deleteModal && (
-        <div className="modal" style={{ display: 'block' }} onClick={e => { if (e.target === e.currentTarget) cancelDelete(); }}>
+        <div className="modal" style={{ display: 'block', zIndex: 9999 }} onClick={e => { if (e.target === e.currentTarget) cancelDelete(); }}>
           <div className="modal-content" style={isMobile ? { width: '98%', padding: 10 } : {}}>
             <div className="modal-header">
               <h3>🗑️ 删除确认</h3>
@@ -1083,7 +1083,7 @@ const App: React.FC = () => {
         </div>
       )}
       {batchDeleteModal && (
-        <div className="modal" style={{ display: 'block' }} onClick={e => { if (e.target === e.currentTarget) cancelBatchDelete(); }}>
+        <div className="modal" style={{ display: 'block', zIndex: 9999 }} onClick={e => { if (e.target === e.currentTarget) cancelBatchDelete(); }}>
           <div className="modal-content" style={isMobile ? { width: '98%', padding: 10 } : {}}>
             <div className="modal-header">
               <h3>🗑️ 批量删除确认</h3>
@@ -1126,7 +1126,7 @@ const App: React.FC = () => {
         </div>
       )}
       {infoModal && (
-        <div className="modal" style={{ display: 'block' }} onClick={e => { if (e.target === e.currentTarget) closeInfoModal(); }}>
+        <div className="modal" style={{ display: 'block', zIndex: 9999 }} onClick={e => { if (e.target === e.currentTarget) closeInfoModal(); }}>
           <div className="modal-content" style={isMobile ? { width: '98%', padding: 10 } : {}}>
             <div className="modal-header">
               <h3>{infoTitle}</h3>
@@ -1155,7 +1155,7 @@ const App: React.FC = () => {
         </div>
       )}
       {settingsOpen && (
-        <div className="modal" style={{ display: 'block' }} onClick={e => { if (e.target === e.currentTarget) setSettingsOpen(false); }}>
+        <div className="modal" style={{ display: 'block', zIndex: 9999 }} onClick={e => { if (e.target === e.currentTarget) setSettingsOpen(false); }}>
           <div className="modal-content" style={isMobile ? { width: '98%', padding: 10 } : {}}>
             <div className="modal-header">
               <h3>⚙️ 系统设置</h3>
