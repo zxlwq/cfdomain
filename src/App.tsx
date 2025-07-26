@@ -1125,35 +1125,6 @@ const App: React.FC = () => {
           </div>
         </div>
       )}
-      {infoModal && (
-        <div className="modal" style={{ display: 'block', zIndex: 9999 }} onClick={e => { if (e.target === e.currentTarget) closeInfoModal(); }}>
-          <div className="modal-content" style={isMobile ? { width: '98%', padding: 10 } : {}}>
-            <div className="modal-header">
-              <h3>{infoTitle}</h3>
-            </div>
-            <div className="modal-body">
-              <p style={{ 
-                margin: '10px 0', 
-                padding: '15px', 
-                background: 'rgba(255, 255, 255, 0.1)', 
-                borderRadius: 12,
-                backdropFilter: 'blur(10px)',
-                WebkitBackdropFilter: 'blur(10px)',
-                border: '1px solid rgba(255, 255, 255, 0.2)',
-                boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-                color: '#fff',
-                fontSize: '16px',
-                lineHeight: '1.5'
-              }}>
-                {infoMessage}
-              </p>
-            </div>
-            <div className="modal-buttons">
-              <button className="btn btn-primary" onClick={closeInfoModal}>确定</button>
-            </div>
-          </div>
-        </div>
-      )}
       {settingsOpen && (
         <div className="modal" style={{ display: 'block', zIndex: 9999 }} onClick={e => { if (e.target === e.currentTarget) setSettingsOpen(false); }}>
           <div className="modal-content" style={isMobile ? { width: '98%', padding: 10 } : {}}>
@@ -1417,6 +1388,35 @@ const App: React.FC = () => {
             </div>
             <div className="modal-buttons">
               <button className="btn btn-secondary" style={{ backgroundColor: '#ffb6c1', borderColor: '#ffb6c1', color: '#fff' }} onClick={() => setSettingsOpen(false)}>关闭</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {infoModal && (
+        <div className="modal" style={{ display: 'block', zIndex: 99999 }} onClick={e => { if (e.target === e.currentTarget) closeInfoModal(); }}>
+          <div className="modal-content" style={isMobile ? { width: '98%', padding: 10 } : {}}>
+            <div className="modal-header">
+              <h3>{infoTitle}</h3>
+            </div>
+            <div className="modal-body">
+              <p style={{ 
+                margin: '10px 0', 
+                padding: '15px', 
+                background: 'rgba(255, 255, 255, 0.1)', 
+                borderRadius: 12,
+                backdropFilter: 'blur(10px)',
+                WebkitBackdropFilter: 'blur(10px)',
+                border: '1px solid rgba(255, 255, 255, 0.2)',
+                boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+                color: '#fff',
+                fontSize: '16px',
+                lineHeight: '1.5'
+              }}>
+                {infoMessage}
+              </p>
+            </div>
+            <div className="modal-buttons">
+              <button className="btn btn-primary" onClick={closeInfoModal}>确定</button>
             </div>
           </div>
         </div>
