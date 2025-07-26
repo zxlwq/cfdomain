@@ -179,7 +179,9 @@ const App: React.FC = () => {
   // 当 dontRemindToday 变为 false 时，重新检查即将到期的域名
   useEffect(() => {
     if (!dontRemindToday && domains.length > 0) {
-      checkExpiringDomains(domains);
+      checkExpiringDomains(domains).catch(error => {
+        console.error('检查到期域名时出错:', error);
+      });
     }
   }, [dontRemindToday, domains]);
   function handleCloseExpireModal(dontRemind: boolean) {
@@ -196,7 +198,9 @@ const App: React.FC = () => {
       setDomains(data);
       // 加载域名后检查是否有即将到期的域名
       if (!dontRemindToday) {
-        checkExpiringDomains(data);
+        checkExpiringDomains(data).catch(error => {
+          console.error('检查到期域名时出错:', error);
+        });
       }
     } catch (error) {
       setOpMsg('加载域名失败');
@@ -205,23 +209,39 @@ const App: React.FC = () => {
       setLoading(false);
     }
   }
-  function checkExpiringDomains(domains: Domain[]) {
+  async function checkExpiringDomains(domains: Domain[]) {
     // 如果用户今天已经选择不再提醒，则不显示弹窗
     if (dontRemindToday) {
       return;
     }
     
-    const warningDays = parseInt(localStorage.getItem('notificationWarningDays') || '15', 10);
-    const today = new Date();
-    const warningDate = new Date(today.getTime() + warningDays * 24 * 60 * 60 * 1000);
-    const expiring = domains.filter(domain => {
-      const expire_date = new Date(domain.expire_date);
-      return expire_date <= warningDate && expire_date >= today;
-    });
-    setExpiringDomains(expiring);
-    if (expiring.length > 0) {
-      setExpireModal(true);
-      notifyExpiring(expiring);
+    try {
+      // 从服务器获取通知设置
+      const settingsData = await fetchNotificationSettingsFromServer();
+      if (!settingsData.success || !settingsData.settings) {
+        return;
+      }
+      
+      const settings = settingsData.settings;
+      const notificationEnabled = settings.notificationEnabled === 'true';
+      if (!notificationEnabled) {
+        return;
+      }
+      
+      const warningDays = parseInt(settings.warningDays || '15', 10);
+      const today = new Date();
+      const warningDate = new Date(today.getTime() + warningDays * 24 * 60 * 60 * 1000);
+      const expiring = domains.filter(domain => {
+        const expire_date = new Date(domain.expire_date);
+        return expire_date <= warningDate && expire_date >= today;
+      });
+      setExpiringDomains(expiring);
+      if (expiring.length > 0) {
+        setExpireModal(true);
+        notifyExpiring(expiring);
+      }
+    } catch (error) {
+      console.error('检查到期域名时出错:', error);
     }
   }
   function handleAdd() {
