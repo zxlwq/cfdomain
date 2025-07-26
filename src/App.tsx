@@ -979,11 +979,21 @@ const App: React.FC = () => {
             <div className="modal-body">
               <p>以下域名即将到期，请及时处理：</p>
               {expiringDomains.map(domain => (
-                <div key={domain.domain} style={{ marginBottom: 10, padding: 10, background: '#f8f9fa', borderRadius: 8 }}>
-                  <p><strong>域名:</strong> {domain.domain}</p>
-                  <p><strong>注册商:</strong> {domain.registrar}</p>
-                  <p><strong>过期日期:</strong> {domain.expire_date}</p>
-                  <p><strong>剩余天数:</strong> <span style={{ color: '#dc3545', fontWeight: 600 }}>{Math.ceil((new Date(domain.expire_date).getTime() - Date.now()) / (24 * 60 * 60 * 1000))}天</span></p>
+                <div key={domain.domain} style={{ 
+                  marginBottom: 10, 
+                  padding: 15, 
+                  background: 'rgba(255, 255, 255, 0.1)', 
+                  borderRadius: 12,
+                  backdropFilter: 'blur(10px)',
+                  WebkitBackdropFilter: 'blur(10px)',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+                  color: '#fff'
+                }}>
+                  <p style={{ margin: '5px 0' }}><strong>域名:</strong> {domain.domain}</p>
+                  <p style={{ margin: '5px 0' }}><strong>注册商:</strong> {domain.registrar}</p>
+                  <p style={{ margin: '5px 0' }}><strong>过期日期:</strong> {domain.expire_date}</p>
+                  <p style={{ margin: '5px 0' }}><strong>剩余天数:</strong> <span style={{ color: '#ff6b6b', fontWeight: 600 }}>{Math.ceil((new Date(domain.expire_date).getTime() - Date.now()) / (24 * 60 * 60 * 1000))}天</span></p>
                 </div>
               ))}
             </div>
