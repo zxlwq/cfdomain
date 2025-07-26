@@ -54,8 +54,16 @@ const App: React.FC = () => {
   const [bgImageUrl, setBgImageUrl] = useState(() => localStorage.getItem('customBgImageUrl') || '');
   const [selectedIndexes, setSelectedIndexes] = useState<number[]>([]);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
-  const [dontRemindToday, setDontRemindToday] = useState(false);
+  const [dontRemindToday, setDontRemindToday] = useState(() => {
+    const dontRemindDate = localStorage.getItem('dontRemindToday');
+    return dontRemindDate === todayStr;
+  });
   const todayStr = new Date().toISOString().slice(0, 10);
+  // 检查今天是否已经发送过通知
+  const [notificationSentToday, setNotificationSentToday] = useState(() => {
+    const lastNotificationDate = localStorage.getItem('lastNotificationDate');
+    return lastNotificationDate === todayStr;
+  });
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'expired' | 'pending'>('all');
   const editRowRef = React.useRef<HTMLTableRowElement>(null);
   const [editIndex, setEditIndex] = useState<number>(-1);
@@ -129,6 +137,20 @@ const App: React.FC = () => {
   useEffect(() => {
     loadDomains();
   }, []);
+  
+  // 每天开始时重置通知状态
+  useEffect(() => {
+    const lastNotificationDate = localStorage.getItem('lastNotificationDate');
+    if (lastNotificationDate !== todayStr) {
+      // 如果是新的一天，重置通知状态
+      setNotificationSentToday(false);
+    }
+    
+    // 检查并更新不再提醒状态
+    const dontRemindDate = localStorage.getItem('dontRemindToday');
+    const shouldDontRemind = dontRemindDate === todayStr;
+    setDontRemindToday(shouldDontRemind);
+  }, [todayStr]);
   const [carouselImages, setCarouselImages] = useState<string[]>([]);
   const carouselIndex = useRef(0);
   const carouselTimer = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -190,6 +212,11 @@ const App: React.FC = () => {
       localStorage.setItem('dontRemindToday', todayStr);
       setDontRemindToday(true);
     }
+    // 无论是否选择不再提醒，都记录今天已发送通知
+    if (!notificationSentToday) {
+      localStorage.setItem('lastNotificationDate', todayStr);
+      setNotificationSentToday(true);
+    }
   }
   async function loadDomains() {
     setLoading(true);
@@ -238,7 +265,14 @@ const App: React.FC = () => {
       setExpiringDomains(expiring);
       if (expiring.length > 0) {
         setExpireModal(true);
-        notifyExpiring(expiring);
+        
+        // 检查今天是否已经发送过通知
+        if (!notificationSentToday) {
+          // 发送通知并记录今天已发送
+          await notifyExpiring(expiring);
+          localStorage.setItem('lastNotificationDate', todayStr);
+          setNotificationSentToday(true);
+        }
       }
     } catch (error) {
       console.error('检查到期域名时出错:', error);
