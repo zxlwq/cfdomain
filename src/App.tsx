@@ -49,6 +49,10 @@ const App: React.FC = () => {
   const [expiringDomains, setExpiringDomains] = useState<Domain[]>([]);
   const [deleteModal, setDeleteModal] = useState(false);
   const [domainToDelete, setDomainToDelete] = useState<Domain | null>(null);
+  const [batchDeleteModal, setBatchDeleteModal] = useState(false);
+  const [infoModal, setInfoModal] = useState(false);
+  const [infoMessage, setInfoMessage] = useState('');
+  const [infoTitle, setInfoTitle] = useState('');
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [warningDays, setWarningDays] = useState(() => localStorage.getItem('notificationWarningDays') || '15');
   const [notificationEnabled, setNotificationEnabled] = useState(() => localStorage.getItem('notificationEnabled') || 'true');
@@ -314,6 +318,18 @@ const App: React.FC = () => {
     setDomainToDelete(null);
   }
 
+  function showInfoModal(title: string, message: string) {
+    setInfoTitle(title);
+    setInfoMessage(message);
+    setInfoModal(true);
+  }
+
+  function closeInfoModal() {
+    setInfoModal(false);
+    setInfoMessage('');
+    setInfoTitle('');
+  }
+
   function handleCopyDomain(domain: string) {
     navigator.clipboard.writeText(domain).then(() => {
       setOpMsg('域名已复制到剪贴板');
@@ -412,8 +428,14 @@ const App: React.FC = () => {
     setSelectedIndexes((prev: number[]) => checked ? [...prev, idx] : prev.filter((i: number) => i !== idx));
   }
   async function handleBatchDelete() {
-    if (selectedIndexes.length === 0) return alert('请先选择要删除的域名');
-    if (!window.confirm('确定要批量删除选中的域名吗？')) return;
+    if (selectedIndexes.length === 0) {
+      showInfoModal('提示', '请先选择要删除的域名');
+      return;
+    }
+    setBatchDeleteModal(true);
+  }
+
+  async function confirmBatchDelete() {
     const filteredList = filteredDomains();
     const domainsToDelete = selectedIndexes.map((idx: number) => filteredList[idx]);
     const newDomains = domains.filter((domain: Domain) => !domainsToDelete.some((d: Domain) => d.domain === domain.domain));
@@ -422,9 +444,17 @@ const App: React.FC = () => {
     await loadDomains();
     setOpMsg('批量删除成功');
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    setBatchDeleteModal(false);
+  }
+
+  function cancelBatchDelete() {
+    setBatchDeleteModal(false);
   }
   async function handleBatchSetStatus(status: string) {
-    if (selectedIndexes.length === 0) return alert('请先选择要操作的域名');
+    if (selectedIndexes.length === 0) {
+      showInfoModal('提示', '请先选择要操作的域名');
+      return;
+    }
     // 2. 修复 status 类型不兼容
     const validStatus = (status: string): 'active' | 'expired' | 'pending' => {
       if (status === 'active' || status === 'expired' || status === 'pending') return status;
@@ -465,15 +495,15 @@ const App: React.FC = () => {
       notificationMethod: JSON.stringify(notificationMethods)
     });
     if (res.success) {
-      alert('通知设置已保存');
+      showInfoModal('成功', '通知设置已保存');
     } else {
-      alert('保存失败：' + (res.error || '未知错误'));
+      showInfoModal('错误', '保存失败：' + (res.error || '未知错误'));
     }
   }
   function saveBgImage() {
     localStorage.setItem('customBgImageUrl', bgImageUrl);
     localStorage.setItem('carouselInterval', String(carouselInterval));
-    alert('背景图片已保存');
+    showInfoModal('成功', '背景图片已保存');
   }
   function resetBgImage() {
     setBgImageUrl('');
@@ -804,7 +834,7 @@ const App: React.FC = () => {
                           if (domain.renewUrl && domain.renewUrl.trim() !== '') {
                             window.open(domain.renewUrl, '_blank');
                           } else {
-                            alert(`请联系注册商 ${domain.registrar} 对域名 ${domain.domain} 进行续期操作。`);
+                            showInfoModal('续期提示', `请联系注册商 ${domain.registrar} 对域名 ${domain.domain} 进行续期操作。`);
                           }
                         }}>续期</button>
                         <button 
@@ -1048,6 +1078,78 @@ const App: React.FC = () => {
             <div className="modal-buttons">
               <button className="btn btn-danger" onClick={confirmDelete}>确认删除</button>
               <button className="btn btn-secondary" onClick={cancelDelete}>取消</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {batchDeleteModal && (
+        <div className="modal" style={{ display: 'block' }} onClick={e => { if (e.target === e.currentTarget) cancelBatchDelete(); }}>
+          <div className="modal-content" style={isMobile ? { width: '98%', padding: 10 } : {}}>
+            <div className="modal-header">
+              <h3>🗑️ 批量删除确认</h3>
+            </div>
+            <div className="modal-body">
+              <p>确定要批量删除选中的 {selectedIndexes.length} 个域名吗？此操作不可撤销：</p>
+              <div style={{ 
+                marginBottom: 10, 
+                padding: 15, 
+                background: 'rgba(255, 255, 255, 0.1)', 
+                borderRadius: 12,
+                backdropFilter: 'blur(10px)',
+                WebkitBackdropFilter: 'blur(10px)',
+                border: '1px solid rgba(255, 255, 255, 0.2)',
+                boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+                color: '#fff',
+                maxHeight: 200,
+                overflowY: 'auto'
+              }}>
+                {selectedIndexes.map((idx, index) => {
+                  const domain = filteredDomains()[idx];
+                  return (
+                    <div key={domain.domain} style={{ 
+                      padding: '8px 0', 
+                      borderBottom: index < selectedIndexes.length - 1 ? '1px solid rgba(255, 255, 255, 0.1)' : 'none' 
+                    }}>
+                      <p style={{ margin: '2px 0', fontSize: '14px' }}>
+                        <strong>{domain.domain}</strong> - {domain.registrar}
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            <div className="modal-buttons">
+              <button className="btn btn-danger" onClick={confirmBatchDelete}>确认删除</button>
+              <button className="btn btn-secondary" onClick={cancelBatchDelete}>取消</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {infoModal && (
+        <div className="modal" style={{ display: 'block' }} onClick={e => { if (e.target === e.currentTarget) closeInfoModal(); }}>
+          <div className="modal-content" style={isMobile ? { width: '98%', padding: 10 } : {}}>
+            <div className="modal-header">
+              <h3>{infoTitle}</h3>
+            </div>
+            <div className="modal-body">
+              <p style={{ 
+                margin: '10px 0', 
+                padding: '15px', 
+                background: 'rgba(255, 255, 255, 0.1)', 
+                borderRadius: 12,
+                backdropFilter: 'blur(10px)',
+                WebkitBackdropFilter: 'blur(10px)',
+                border: '1px solid rgba(255, 255, 255, 0.2)',
+                boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+                color: '#fff',
+                fontSize: '16px',
+                lineHeight: '1.5'
+              }}>
+                {infoMessage}
+              </p>
+            </div>
+            <div className="modal-buttons">
+              <button className="btn btn-primary" onClick={closeInfoModal}>确定</button>
             </div>
           </div>
         </div>
