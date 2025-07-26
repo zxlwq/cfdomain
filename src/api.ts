@@ -53,7 +53,7 @@ export async function deleteDomain(domain: string): Promise<void> {
 }
 
 export async function notifyExpiring(domains: Domain[]): Promise<void> {
-  await fetch('/functions/notify', {
+  await fetch('/api/notify', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ domains })
