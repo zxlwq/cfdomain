@@ -11,7 +11,7 @@ import {
 
 const STATUS_LABELS: Record<string, string> = {
   active: '正常',
-  expired: '已过期',
+  expired: '即将到期',
   pending: '待激活',
 };
 
@@ -521,13 +521,13 @@ const App: React.FC = () => {
     }
     try {
       const header = ['域名','注册商','注册日期','过期日期','状态'];
-      const rows = domains.map((d: Domain) => [
-        d.domain,
-        d.registrar,
-        d.register_date,
-        d.expire_date,
-        d.status === 'active' ? '正常' : d.status === 'expired' ? '已过期' : '待激活'
-      ]);
+              const rows = domains.map((d: Domain) => [
+          d.domain,
+          d.registrar,
+          d.register_date,
+          d.expire_date,
+          d.status === 'active' ? '正常' : d.status === 'expired' ? '即将到期' : '待激活'
+        ]);
       let csvContent = header.join(',') + '\n' + rows.map((r: string[]) => r.join(',')).join('\n');
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
@@ -555,7 +555,7 @@ const App: React.FC = () => {
           d.registrar,
           d.register_date,
           d.expire_date,
-          d.status === 'active' ? '正常' : d.status === 'expired' ? '已过期' : '待激活'
+          d.status === 'active' ? '正常' : d.status === 'expired' ? '即将到期' : '待激活'
         ]);
         let content = header.join(',') + '\n' + rows.map((r: string[]) => r.join(',')).join('\n');
         const blob = new Blob([content], { type: format === 'csv' ? 'text/csv;charset=utf-8;' : 'text/plain;charset=utf-8;' });
@@ -661,7 +661,7 @@ const App: React.FC = () => {
               register_date: cols[colIdx.register_date!],
               expire_date: cols[colIdx.expire_date!],
               status: (cols[colIdx.status!] === '正常' || cols[colIdx.status!] === 'active' || cols[colIdx.status!].toLowerCase() === 'active') ? 'active' :
-                      (cols[colIdx.status!] === '已过期' || cols[colIdx.status!] === 'expired' || cols[colIdx.status!].toLowerCase() === 'expired') ? 'expired' : 'pending'
+                      (cols[colIdx.status!] === '即将到期' || cols[colIdx.status!] === 'expired' || cols[colIdx.status!].toLowerCase() === 'expired') ? 'expired' : 'pending'
             };
             if (colIdx.id !== undefined && cols[colIdx.id!]) {
               const idVal = cols[colIdx.id!];
@@ -726,7 +726,7 @@ const App: React.FC = () => {
           <p style={{ fontSize: '2.6rem', color: '#007bff', fontWeight: 700, margin: 0, lineHeight: 1.1 }}>{active}</p>
         </div>
         <div className="stat-card">
-          <h3>已过期域名</h3>
+          <h3>即将到期域名</h3>
           <p style={{ fontSize: '2.6rem', color: '#007bff', fontWeight: 700, margin: 0, lineHeight: 1.1 }}>{expired}</p>
         </div>
         <div className="stat-card">
@@ -790,7 +790,7 @@ const App: React.FC = () => {
                       defaultValue=""
                     >
                       <option value="" disabled>批量操作</option>
-                      <option value="expired">批量为已过期</option>
+                      <option value="expired">批量为即将到期</option>
                       <option value="active">批量为正常</option>
                       <option value="delete">批量删除</option>
                     </select>
@@ -985,7 +985,7 @@ const App: React.FC = () => {
                   transition: 'background 0.2s',
                 }}>
                   <option value="active">正常</option>
-                  <option value="expired">已过期</option>
+                  <option value="expired">即将到期</option>
                   <option value="pending">待激活</option>
                 </select>
               </div>
